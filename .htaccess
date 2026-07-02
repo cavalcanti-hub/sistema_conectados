@@ -1,0 +1,21 @@
+DirectoryIndex index.php index.html
+Options -Indexes
+
+AddType application/manifest+json .webmanifest
+AddType application/javascript .js
+
+RewriteEngine On
+
+RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L]
+RewriteRule ^(app|database|resources)(/|$) - [F,L]
+RewriteRule \.(env|ini|log|sql|zip|bak|old|orig)$ - [F,L]
+
+RewriteRule ^(sw\.js|manifest\.webmanifest|favicon\.png)$ public/$1 [L]
+RewriteRule ^(assets|uploads)/(.*)$ public/$1/$2 [L]
+
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+RewriteRule ^$ index.php [L,QSA]
+RewriteRule ^(.+)$ index.php?url=$1 [L,QSA]

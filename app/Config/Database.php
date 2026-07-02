@@ -1,0 +1,711 @@
+<?php
+
+namespace App\Config;
+
+use PDO;
+use PDOException;
+
+class Database
+{
+    private static $instance = null;
+    private $conn;
+
+    private $host;
+    private $port;
+    private $db_name;
+    private $username;
+    private $password;
+
+    private function __construct()
+    {
+        $this->host = \app_env('DB_HOST', '127.0.0.1');
+        $this->port = \app_env('DB_PORT', '3306');
+        $this->db_name = \app_env('DB_DATABASE', 'sistema-conectados');
+        $this->username = \app_env('DB_USERNAME', 'root');
+        $this->password = \app_env('DB_PASSWORD', '');
+
+        try {
+            $this->conn = new PDO(
+                "mysql:host={$this->host};port={$this->port};dbname={$this->db_name}",
+                $this->username,
+                $this->password
+            );
+            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+            $this->conn->exec("SET NAMES utf8mb4");
+            $this->ensureSchema();
+        } catch (PDOException $e) {
+            http_response_code(500);
+            $debug = filter_var(\app_env('APP_DEBUG', 'false'), FILTER_VALIDATE_BOOLEAN);
+            die($debug ? "Erro na conexao: " . $e->getMessage() : "Erro ao conectar ao banco de dados.");
+        }
+    }
+
+    private function ensureSchema()
+    {
+        $statements = [
+            "CREATE TABLE IF NOT EXISTS usuarios (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nome VARCHAR(100) NOT NULL,
+                email VARCHAR(100) UNIQUE NOT NULL,
+                senha VARCHAR(255) NOT NULL,
+                perfil VARCHAR(50) NOT NULL,
+                especialidade VARCHAR(100),
+                comissao DECIMAL(5,2) DEFAULT 0.00,
+                meta_os_mes INT DEFAULT 30,
+                status ENUM('Ativo', 'Inativo') DEFAULT 'Ativo',
+                ultimo_login DATETIME,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS clientes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nome VARCHAR(150) NOT NULL,
+                cpf_cnpj VARCHAR(20) UNIQUE NOT NULL,
+                telefone VARCHAR(20),
+                whatsapp VARCHAR(20),
+                email VARCHAR(100),
+                endereco TEXT,
+                observacoes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS aparelhos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                cliente_id INT NOT NULL,
+                marca VARCHAR(50) NOT NULL,
+                modelo VARCHAR(100) NOT NULL,
+                imei VARCHAR(50),
+                numero_serie VARCHAR(50),
+                cor VARCHAR(30),
+                senha_padrao VARCHAR(100),
+                estado_fisico TEXT,
+                acessorios TEXT,
+                observacoes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_aparelhos_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS servicos_referencia (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nome VARCHAR(100) NOT NULL,
+                preco_sugerido DECIMAL(10,2),
+                tempo_medio VARCHAR(50),
+                garantia_padrao INT DEFAULT 90
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS categorias (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nome VARCHAR(100) NOT NULL,
+                tipo ENUM('peca', 'produto') NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uk_categorias_nome_tipo (nome, tipo)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS configuracoes (
+                chave VARCHAR(100) PRIMARY KEY,
+                valor TEXT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS estoque (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                codigo_interno VARCHAR(50) UNIQUE,
+                nome VARCHAR(150) NOT NULL,
+                tipo ENUM('peca', 'produto') NOT NULL DEFAULT 'peca',
+                categoria VARCHAR(50),
+                marca_compativel VARCHAR(50),
+                modelo_compativel VARCHAR(100),
+                quantidade INT DEFAULT 0,
+                estoque_minimo INT DEFAULT 5,
+                custo DECIMAL(10,2),
+                preco_venda DECIMAL(10,2),
+                fornecedor VARCHAR(100),
+                localizacao TEXT NULL,
+                imagem VARCHAR(255),
+                imagem_mime VARCHAR(100) NULL,
+                imagem_blob LONGBLOB NULL,
+                numero_serie VARCHAR(100) NULL,
+                unidade VARCHAR(20) DEFAULT 'unid',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS ordens_servico (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                numero_os VARCHAR(20) UNIQUE NOT NULL,
+                cliente_id INT NOT NULL,
+                aparelho_id INT NOT NULL,
+                tecnico_id INT NULL,
+                problema_relatado TEXT,
+                diagnostico_tecnico TEXT,
+                servico_realizar TEXT,
+                prioridade ENUM('Baixa', 'Normal', 'Alta', 'Urgente') DEFAULT 'Normal',
+                status ENUM('Recebido', 'Em análise', 'Em anÃ¡lise', 'Aguardando aprovação', 'Aguardando aprovaÃ§Ã£o', 'Aprovado', 'Reprovado', 'Em reparo', 'Aguardando peça', 'Aguardando peÃ§a', 'Pronto', 'Entregue', 'Cancelado') DEFAULT 'Recebido',
+                prazo_estimado DATE,
+                valor_mao_obra DECIMAL(10,2) DEFAULT 0.00,
+                valor_pecas DECIMAL(10,2) DEFAULT 0.00,
+                desconto DECIMAL(10,2) DEFAULT 0.00,
+                valor_total DECIMAL(10,2) GENERATED ALWAYS AS (valor_mao_obra + valor_pecas - desconto) STORED,
+                forma_pagamento VARCHAR(50),
+                situacao_pagamento ENUM('Pendente', 'Parcial', 'Pago') DEFAULT 'Pendente',
+                garantia_expira DATE,
+                termo_aceite BOOLEAN DEFAULT FALSE,
+                fotos TEXT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                CONSTRAINT fk_os_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id),
+                CONSTRAINT fk_os_aparelho FOREIGN KEY (aparelho_id) REFERENCES aparelhos(id),
+                CONSTRAINT fk_os_tecnico FOREIGN KEY (tecnico_id) REFERENCES usuarios(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS os_historico (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                os_id INT NOT NULL,
+                usuario_id INT NULL,
+                status_anterior VARCHAR(50),
+                status_novo VARCHAR(50),
+                observacao TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_historico_os FOREIGN KEY (os_id) REFERENCES ordens_servico(id) ON DELETE CASCADE,
+                CONSTRAINT fk_historico_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS os_pagamentos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                os_id INT NOT NULL,
+                valor DECIMAL(10,2) NOT NULL,
+                forma_pagamento VARCHAR(50) NULL,
+                data_pagamento DATE NOT NULL,
+                observacao VARCHAR(255) NULL,
+                usuario_id INT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_os_pagamentos_os FOREIGN KEY (os_id) REFERENCES ordens_servico(id) ON DELETE CASCADE,
+                CONSTRAINT fk_os_pagamentos_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL,
+                INDEX idx_os_pagamentos_os (os_id, data_pagamento, id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS financeiro (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                tipo ENUM('Receita', 'Despesa') NOT NULL,
+                categoria VARCHAR(100),
+                descricao TEXT,
+                valor DECIMAL(10,2) NOT NULL,
+                os_id INT NULL,
+                usuario_id INT NULL,
+                data_pagamento DATE,
+                forma_pagamento VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_financeiro_os FOREIGN KEY (os_id) REFERENCES ordens_servico(id) ON DELETE SET NULL,
+                CONSTRAINT fk_financeiro_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS gastos_pessoais (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                tipo ENUM('Receita', 'Despesa') NOT NULL DEFAULT 'Despesa',
+                categoria VARCHAR(100) NULL,
+                descricao VARCHAR(255) NOT NULL,
+                valor DECIMAL(10,2) NOT NULL,
+                data_lancamento DATE NOT NULL,
+                forma_pagamento VARCHAR(60) NULL,
+                recorrente TINYINT(1) NOT NULL DEFAULT 0,
+                observacoes TEXT NULL,
+                usuario_id INT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                CONSTRAINT fk_gastos_pessoais_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL,
+                INDEX idx_gastos_pessoais_data (data_lancamento),
+                INDEX idx_gastos_pessoais_tipo (tipo)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS gastos_pessoais_categorias (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nome VARCHAR(100) NOT NULL,
+                tipo ENUM('Receita', 'Despesa', 'Ambos') NOT NULL DEFAULT 'Despesa',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uk_gastos_pessoais_categoria (nome)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS compras_solicitacoes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                item_nome VARCHAR(180) NOT NULL,
+                tipo ENUM('peca', 'produto') NOT NULL DEFAULT 'peca',
+                quantidade INT NOT NULL DEFAULT 1,
+                fornecedor VARCHAR(150) NULL,
+                prioridade ENUM('Baixa', 'Normal', 'Alta', 'Urgente') NOT NULL DEFAULT 'Normal',
+                status ENUM('Pendente', 'Solicitado', 'Comprado', 'Recebido', 'Cancelado') NOT NULL DEFAULT 'Pendente',
+                observacoes TEXT NULL,
+                usuario_id INT NULL,
+                data_solicitacao DATE NOT NULL,
+                data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_compras_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL,
+                INDEX idx_compras_status (status),
+                INDEX idx_compras_tipo (tipo),
+                INDEX idx_compras_data (data_solicitacao)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS fornecedores (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nome VARCHAR(160) NOT NULL,
+                documento VARCHAR(40) NULL,
+                telefone VARCHAR(40) NULL,
+                email VARCHAR(120) NULL,
+                endereco TEXT NULL,
+                observacoes TEXT NULL,
+                ativo TINYINT(1) NOT NULL DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_fornecedores_nome (nome),
+                INDEX idx_fornecedores_ativo (ativo)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS compras_notas (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                fornecedor_id INT NULL,
+                numero VARCHAR(80) NULL,
+                data_emissao DATE NOT NULL,
+                data_vencimento DATE NULL,
+                valor_total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+                forma_pagamento VARCHAR(60) NULL,
+                status ENUM('Aberta', 'Baixada', 'Cancelada') NOT NULL DEFAULT 'Aberta',
+                observacoes TEXT NULL,
+                usuario_id INT NULL,
+                baixado_at DATETIME NULL,
+                financeiro_id INT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                CONSTRAINT fk_compras_notas_fornecedor FOREIGN KEY (fornecedor_id) REFERENCES fornecedores(id) ON DELETE SET NULL,
+                CONSTRAINT fk_compras_notas_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL,
+                CONSTRAINT fk_compras_notas_financeiro FOREIGN KEY (financeiro_id) REFERENCES financeiro(id) ON DELETE SET NULL,
+                INDEX idx_compras_notas_status (status),
+                INDEX idx_compras_notas_data (data_emissao)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS compras_nota_itens (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nota_id INT NOT NULL,
+                produto_id INT NULL,
+                descricao VARCHAR(180) NOT NULL,
+                tipo ENUM('peca', 'produto') NOT NULL DEFAULT 'peca',
+                quantidade INT NOT NULL DEFAULT 1,
+                valor_unitario DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+                total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_compras_nota_itens_nota FOREIGN KEY (nota_id) REFERENCES compras_notas(id) ON DELETE CASCADE,
+                CONSTRAINT fk_compras_nota_itens_produto FOREIGN KEY (produto_id) REFERENCES estoque(id) ON DELETE SET NULL,
+                INDEX idx_compras_nota_itens_nota (nota_id),
+                INDEX idx_compras_nota_itens_produto (produto_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS termos_compra_venda (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                numero_termo VARCHAR(40) NOT NULL UNIQUE,
+                vendedor_nome VARCHAR(160) NOT NULL,
+                vendedor_contato VARCHAR(60) NULL,
+                vendedor_cpf VARCHAR(30) NULL,
+                vendedor_rg VARCHAR(30) NULL,
+                vendedor_endereco TEXT NULL,
+                data_entrada DATE NOT NULL,
+                equipamento_tipo VARCHAR(50) NOT NULL DEFAULT 'Smartphone',
+                marca_modelo VARCHAR(180) NOT NULL,
+                imei1 VARCHAR(80) NULL,
+                imei2 VARCHAR(80) NULL,
+                senha_autorizada TINYINT(1) NOT NULL DEFAULT 0,
+                chip_ssd_card TINYINT(1) NOT NULL DEFAULT 0,
+                bateria TINYINT(1) NOT NULL DEFAULT 0,
+                acessorios TEXT NULL,
+                estado_aparelho TEXT NULL,
+                valor_compra DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+                comprador_nome VARCHAR(160) NOT NULL,
+                comprador_contato VARCHAR(60) NULL,
+                comprador_documento VARCHAR(40) NULL,
+                comprador_endereco TEXT NULL,
+                observacoes TEXT NULL,
+                usuario_id INT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                CONSTRAINT fk_termos_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL,
+                INDEX idx_termos_data (data_entrada),
+                INDEX idx_termos_vendedor (vendedor_nome),
+                INDEX idx_termos_equipamento (marca_modelo)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS recados (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nome VARCHAR(150) NOT NULL,
+                telefone VARCHAR(30) NULL,
+                mensagem TEXT NOT NULL,
+                status ENUM('Pendente', 'Lido', 'Respondido', 'Arquivado') NOT NULL DEFAULT 'Pendente',
+                usuario_id INT NULL,
+                data_recado DATE NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                CONSTRAINT fk_recados_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL,
+                INDEX idx_recados_status (status),
+                INDEX idx_recados_data (data_recado)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS pdv_vendas (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                numero_venda VARCHAR(20) UNIQUE NOT NULL,
+                cliente_id INT NULL,
+                os_id INT NULL,
+                usuario_id INT NOT NULL,
+                subtotal DECIMAL(10,2) DEFAULT 0.00,
+                desconto DECIMAL(10,2) DEFAULT 0.00,
+                total DECIMAL(10,2) DEFAULT 0.00,
+                taxa_cartao_percentual DECIMAL(5,2) DEFAULT 0.00,
+                taxa_cartao_valor DECIMAL(10,2) DEFAULT 0.00,
+                total_liquido DECIMAL(10,2) DEFAULT 0.00,
+                forma_pagamento VARCHAR(50),
+                status ENUM('aberta','finalizada','cancelada') DEFAULT 'aberta',
+                observacoes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_pdv_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL,
+                CONSTRAINT fk_pdv_os FOREIGN KEY (os_id) REFERENCES ordens_servico(id) ON DELETE SET NULL,
+                CONSTRAINT fk_pdv_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS pdv_itens (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                venda_id INT NOT NULL,
+                produto_id INT NULL,
+                descricao VARCHAR(255) NOT NULL,
+                quantidade DECIMAL(10,3) NOT NULL DEFAULT 1,
+                preco_unitario DECIMAL(10,2) NOT NULL,
+                total DECIMAL(10,2) GENERATED ALWAYS AS (quantidade * preco_unitario) STORED,
+                CONSTRAINT fk_pdv_item_venda FOREIGN KEY (venda_id) REFERENCES pdv_vendas(id) ON DELETE CASCADE,
+                CONSTRAINT fk_pdv_item_produto FOREIGN KEY (produto_id) REFERENCES estoque(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS estoque_movimentacoes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                produto_id INT NOT NULL,
+                tipo ENUM('entrada','saida','ajuste') NOT NULL,
+                quantidade INT NOT NULL,
+                motivo VARCHAR(255),
+                os_id INT NULL,
+                usuario_id INT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_estoque_movimentacoes_produto
+                    FOREIGN KEY (produto_id) REFERENCES estoque(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS estoque_imagens (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                produto_id INT NOT NULL,
+                imagem VARCHAR(255) NOT NULL,
+                imagem_mime VARCHAR(100) NULL,
+                ordem INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_estoque_imagens_produto
+                    FOREIGN KEY (produto_id) REFERENCES estoque(id) ON DELETE CASCADE,
+                INDEX idx_estoque_imagens_produto (produto_id, ordem, id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS contas_publicas (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nome VARCHAR(150) NOT NULL,
+                email VARCHAR(150) NOT NULL UNIQUE,
+                whatsapp VARCHAR(20) NULL,
+                senha VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS mercado_pago_pedidos (
+                external_reference VARCHAR(80) PRIMARY KEY,
+                preference_id VARCHAR(120) NULL,
+                payment_id VARCHAR(80) NULL,
+                status VARCHAR(40) NOT NULL DEFAULT 'created',
+                status_detail VARCHAR(100) NULL,
+                items_json MEDIUMTEXT NOT NULL,
+                total DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+                customer_name VARCHAR(150) NULL,
+                customer_email VARCHAR(150) NULL,
+                email_sent_at DATETIME NULL,
+                estoque_baixado_at DATETIME NULL,
+                financeiro_lancado_at DATETIME NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS mercado_livre_logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                produto_id INT NULL,
+                item_id VARCHAR(40) NULL,
+                acao VARCHAR(60) NOT NULL,
+                status VARCHAR(40) NOT NULL,
+                mensagem TEXT NULL,
+                payload MEDIUMTEXT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_mercado_livre_logs_produto
+                    FOREIGN KEY (produto_id) REFERENCES estoque(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS mercado_pago_logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                external_reference VARCHAR(80) NULL,
+                payment_id VARCHAR(80) NULL,
+                status VARCHAR(40) NULL,
+                mensagem TEXT NULL,
+                payload MEDIUMTEXT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_mp_logs_ref (external_reference)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        ];
+
+        foreach ($statements as $sql) {
+            $this->conn->exec($sql);
+        }
+
+        $this->ensureColumn('estoque', 'tipo', "ALTER TABLE estoque ADD COLUMN tipo ENUM('peca', 'produto') NOT NULL DEFAULT 'peca' AFTER nome");
+        $this->ensureColumn('estoque', 'imagem', "ALTER TABLE estoque ADD COLUMN imagem VARCHAR(255) NULL AFTER localizacao");
+        $this->ensureColumn('estoque', 'imagem_mime', "ALTER TABLE estoque ADD COLUMN imagem_mime VARCHAR(100) NULL AFTER imagem");
+        $this->ensureColumn('estoque', 'imagem_blob', "ALTER TABLE estoque ADD COLUMN imagem_blob LONGBLOB NULL AFTER imagem_mime");
+        $this->ensureColumn('estoque', 'numero_serie', "ALTER TABLE estoque ADD COLUMN numero_serie VARCHAR(100) NULL AFTER imagem");
+        $this->ensureColumn('estoque', 'unidade', "ALTER TABLE estoque ADD COLUMN unidade VARCHAR(20) DEFAULT 'unid' AFTER numero_serie");
+        $this->ensureColumn('usuarios', 'meta_os_mes', "ALTER TABLE usuarios ADD COLUMN meta_os_mes INT DEFAULT 30 AFTER comissao");
+        $this->ensureColumn('pdv_vendas', 'taxa_cartao_percentual', "ALTER TABLE pdv_vendas ADD COLUMN taxa_cartao_percentual DECIMAL(5,2) DEFAULT 0.00 AFTER total");
+        $this->ensureColumn('pdv_vendas', 'taxa_cartao_valor', "ALTER TABLE pdv_vendas ADD COLUMN taxa_cartao_valor DECIMAL(10,2) DEFAULT 0.00 AFTER taxa_cartao_percentual");
+        $this->ensureColumn('pdv_vendas', 'total_liquido', "ALTER TABLE pdv_vendas ADD COLUMN total_liquido DECIMAL(10,2) DEFAULT 0.00 AFTER taxa_cartao_valor");
+        $this->ensureColumn('ordens_servico', 'fotos', "ALTER TABLE ordens_servico ADD COLUMN fotos TEXT NULL AFTER termo_aceite");
+        $this->ensureColumn('mercado_pago_pedidos', 'estoque_baixado_at', "ALTER TABLE mercado_pago_pedidos ADD COLUMN estoque_baixado_at DATETIME NULL AFTER email_sent_at");
+        $this->ensureColumn('mercado_pago_pedidos', 'financeiro_lancado_at', "ALTER TABLE mercado_pago_pedidos ADD COLUMN financeiro_lancado_at DATETIME NULL AFTER estoque_baixado_at");
+        $this->ensureColumn('estoque_movimentacoes', 'os_id', "ALTER TABLE estoque_movimentacoes ADD COLUMN os_id INT NULL AFTER motivo");
+        $this->ensureColumn('estoque', 'mercado_livre_item_id', "ALTER TABLE estoque ADD COLUMN mercado_livre_item_id VARCHAR(40) NULL AFTER unidade");
+        $this->ensureColumn('estoque', 'mercado_livre_permalink', "ALTER TABLE estoque ADD COLUMN mercado_livre_permalink VARCHAR(255) NULL AFTER mercado_livre_item_id");
+        $this->ensureColumn('estoque', 'mercado_livre_status', "ALTER TABLE estoque ADD COLUMN mercado_livre_status VARCHAR(40) NULL AFTER mercado_livre_permalink");
+        $this->ensureColumn('estoque', 'mercado_livre_category_id', "ALTER TABLE estoque ADD COLUMN mercado_livre_category_id VARCHAR(40) NULL AFTER mercado_livre_status");
+        $this->ensureColumn('estoque', 'mercado_livre_listing_type_id', "ALTER TABLE estoque ADD COLUMN mercado_livre_listing_type_id VARCHAR(40) NULL AFTER mercado_livre_category_id");
+        $this->ensureColumn('estoque', 'mercado_livre_condition', "ALTER TABLE estoque ADD COLUMN mercado_livre_condition VARCHAR(20) NULL AFTER mercado_livre_listing_type_id");
+        $this->ensureColumn('estoque', 'mercado_livre_attributes', "ALTER TABLE estoque ADD COLUMN mercado_livre_attributes TEXT NULL AFTER mercado_livre_condition");
+        $this->ensureColumn('estoque', 'mercado_livre_last_sync_at', "ALTER TABLE estoque ADD COLUMN mercado_livre_last_sync_at DATETIME NULL AFTER mercado_livre_condition");
+        $this->ensureColumn('estoque', 'mercado_livre_last_error', "ALTER TABLE estoque ADD COLUMN mercado_livre_last_error TEXT NULL AFTER mercado_livre_last_sync_at");
+        $this->normalizeSchemaData();
+        $this->ensureIndex('estoque', 'idx_estoque_tipo', 'tipo');
+        $this->ensureIndex('estoque', 'idx_estoque_ml_status', 'mercado_livre_status');
+        $this->ensureIndex('mercado_livre_logs', 'idx_ml_logs_produto', 'produto_id');
+        $this->ensureIndex('ordens_servico', 'idx_os_status', 'status');
+        $this->ensureIndex('mercado_pago_pedidos', 'idx_mp_status', 'status');
+        $this->ensureIndex('recados', 'idx_recados_status', 'status');
+        $this->ensureIndex('recados', 'idx_recados_data', 'data_recado');
+        $this->ensureIndex('os_pagamentos', 'idx_os_pagamentos_os', 'os_id');
+        $this->ensureIndex('financeiro', 'idx_financeiro_tipo', 'tipo');
+        $this->ensureIndex('financeiro', 'idx_financeiro_data_pagamento', 'data_pagamento');
+        $this->ensureIndex('financeiro', 'idx_financeiro_os', 'os_id');
+        $this->ensureIndex('pdv_vendas', 'idx_pdv_status', 'status');
+        $this->ensureIndex('pdv_vendas', 'idx_pdv_created_at', 'created_at');
+        $this->ensureIndex('pdv_vendas', 'idx_pdv_cliente', 'cliente_id');
+        $this->ensureIndex('pdv_vendas', 'idx_pdv_os', 'os_id');
+        $this->ensureIndex('estoque', 'idx_estoque_categoria', 'categoria');
+        $this->ensureIndex('termos_compra_venda', 'idx_termos_data', 'data_entrada');
+        $this->ensureIndex('termos_compra_venda', 'idx_termos_vendedor', 'vendedor_nome');
+        $this->ensureIndex('termos_compra_venda', 'idx_termos_equipamento', 'marca_modelo');
+
+        $this->seedAdminFromEnv();
+        $this->syncApprovedMercadoPagoFinanceiro();
+
+        $defaultConfigs = [
+            'nome_empresa',
+            'whatsapp',
+            'endereco',
+            'website',
+            'email_negocio',
+            'instagram',
+            'facebook',
+            'tiktok',
+            'linkedin',
+            'vitrine_hero_kicker',
+            'vitrine_hero_titulo',
+            'vitrine_hero_texto',
+            'vitrine_offer_1_texto',
+            'vitrine_offer_1_icone',
+            'vitrine_offer_2_texto',
+            'vitrine_offer_2_icone',
+            'vitrine_offer_3_texto',
+            'vitrine_offer_3_icone',
+            'vitrine_offer_4_texto',
+            'vitrine_offer_4_icone',
+            'vitrine_offer_5_texto',
+            'vitrine_offer_5_icone',
+            'vitrine_offer_6_texto',
+            'vitrine_offer_6_icone',
+            'vitrine_benefit_1_titulo',
+            'vitrine_benefit_1_texto',
+            'vitrine_benefit_2_titulo',
+            'vitrine_benefit_2_texto',
+            'vitrine_benefit_3_titulo',
+            'vitrine_benefit_3_texto',
+            'vitrine_benefit_4_titulo',
+            'vitrine_benefit_4_texto',
+            'vitrine_categorias_texto',
+            'vitrine_lancamentos_titulo',
+            'vitrine_lancamentos_texto',
+            'vitrine_mais_procurados_titulo',
+            'vitrine_mais_procurados_texto',
+            'vitrine_servicos_titulo',
+            'vitrine_servicos_texto',
+            'vitrine_servico_1_titulo',
+            'vitrine_servico_1_texto',
+            'vitrine_servico_2_titulo',
+            'vitrine_servico_2_texto',
+            'vitrine_servico_3_titulo',
+            'vitrine_servico_3_texto',
+            'vitrine_servico_4_titulo',
+            'vitrine_servico_4_texto',
+            'vitrine_depoimentos_titulo',
+            'vitrine_depoimentos_texto',
+            'vitrine_depoimento_1_nome',
+            'vitrine_depoimento_1_texto',
+            'vitrine_depoimento_2_nome',
+            'vitrine_depoimento_2_texto',
+            'vitrine_depoimento_3_nome',
+            'vitrine_depoimento_3_texto',
+            'vitrine_localizacao_titulo',
+            'vitrine_localizacao_texto',
+            'vitrine_localizacao_descricao',
+            'vitrine_mapa_embed_url',
+            'vitrine_localizacao_mapa_titulo',
+            'vitrine_localizacao_mapa_texto',
+            'vitrine_cta_texto',
+            'mercadopago_public_key',
+            'mercadopago_access_token',
+            'mercado_livre_client_id',
+            'mercado_livre_client_secret',
+            'mercado_livre_access_token',
+            'mercado_livre_refresh_token',
+            'mercado_livre_token_expires_at',
+            'mercado_livre_user_id',
+            'mercado_livre_nickname',
+            'mercado_livre_default_category_id',
+            'mercado_livre_default_listing_type_id',
+            'mercado_livre_default_condition',
+            'mercado_livre_default_shipping_mode',
+            'chave_pix',
+            'taxa_cartao_debito',
+            'taxa_cartao_credito',
+        ];
+
+        $stmt = $this->conn->prepare("INSERT IGNORE INTO configuracoes (chave, valor) VALUES (:chave, '')");
+        foreach ($defaultConfigs as $chave) {
+            $stmt->execute([':chave' => $chave]);
+        }
+    }
+
+    private function seedAdminFromEnv(): void
+    {
+        $email = trim((string) \app_env('ADMIN_EMAIL', ''));
+        $password = (string) \app_env('ADMIN_PASSWORD', '');
+        $name = trim((string) \app_env('ADMIN_NAME', 'Admin Conectados')) ?: 'Admin Conectados';
+
+        if ($email === '' || $password === '') {
+            return;
+        }
+
+        $stmt = $this->conn->prepare("INSERT IGNORE INTO usuarios (nome, email, senha, perfil, status)
+            VALUES (:nome, :email, :senha, 'Administrador', 'Ativo')");
+        $stmt->execute([
+            ':nome' => $name,
+            ':email' => $email,
+            ':senha' => password_hash($password, PASSWORD_BCRYPT),
+        ]);
+    }
+
+    private function ensureColumn(string $table, string $column, string $alterSql): void
+    {
+        if (!preg_match('/^[A-Za-z0-9_]+$/', $table) || !preg_match('/^[A-Za-z0-9_]+$/', $column)) {
+            return;
+        }
+
+        $stmt = $this->conn->query("SHOW TABLES LIKE " . $this->conn->quote($table));
+        if (!$stmt || !$stmt->fetchColumn()) {
+            return;
+        }
+
+        $stmt = $this->conn->query("SHOW COLUMNS FROM `$table` LIKE " . $this->conn->quote($column));
+        if ($stmt && $stmt->fetchColumn()) {
+            return;
+        }
+
+        $this->conn->exec($alterSql);
+    }
+
+    private function ensureIndex(string $table, string $index, string $column): void
+    {
+        if (!preg_match('/^[A-Za-z0-9_]+$/', $table . $index . $column)) {
+            return;
+        }
+
+        $stmt = $this->conn->query("SHOW INDEX FROM `$table` WHERE Key_name = " . $this->conn->quote($index));
+        if ($stmt && $stmt->fetchColumn()) {
+            return;
+        }
+
+        $this->conn->exec("ALTER TABLE `$table` ADD INDEX `$index` (`$column`)");
+    }
+
+    private function normalizeSchemaData(): void
+    {
+        try {
+            $this->conn->exec("ALTER TABLE estoque MODIFY localizacao TEXT NULL");
+        } catch (\Throwable $e) {
+            error_log('Nao foi possivel ajustar descricao/localizacao do estoque: ' . $e->getMessage());
+        }
+
+        try {
+            $this->conn->exec("ALTER TABLE ordens_servico MODIFY status VARCHAR(50) NOT NULL DEFAULT 'Recebido'");
+        } catch (\Throwable $e) {
+            error_log('Nao foi possivel ajustar status da OS: ' . $e->getMessage());
+        }
+
+        $updates = [
+            "UPDATE ordens_servico SET status = 'Em análise' WHERE status IN ('Em analise','Em anÃ¡lise','Em anÃƒÂ¡lise')",
+            "UPDATE ordens_servico SET status = 'Aguardando aprovação' WHERE status IN ('Aguardando aprovacao','Aguardando aprovaÃ§Ã£o','Aguardando aprovaÃƒÂ§ÃƒÂ£o')",
+            "UPDATE ordens_servico SET status = 'Aguardando peça' WHERE status IN ('Aguardando peca','Aguardando peÃ§a','Aguardando peÃƒÂ§a')",
+        ];
+
+        foreach ($updates as $sql) {
+            try {
+                $this->conn->exec($sql);
+            } catch (\Throwable $e) {
+                error_log('Nao foi possivel normalizar status da OS: ' . $e->getMessage());
+            }
+        }
+    }
+
+    private function syncApprovedMercadoPagoFinanceiro(): void
+    {
+        try {
+            $this->conn->exec("
+                INSERT INTO financeiro (tipo, categoria, descricao, valor, os_id, usuario_id, data_pagamento, forma_pagamento)
+                SELECT
+                    'Receita',
+                    'Venda Site (Mercado Pago)',
+                    CONCAT('Venda site Mercado Pago ', mp.external_reference,
+                        CASE
+                            WHEN COALESCE(mp.payment_id, '') <> '' THEN CONCAT(' - Pagamento ', mp.payment_id)
+                            ELSE ''
+                        END
+                    ),
+                    mp.total,
+                    NULL,
+                    NULL,
+                    DATE(COALESCE(mp.updated_at, mp.created_at, NOW())),
+                    'Mercado Pago'
+                FROM mercado_pago_pedidos mp
+                WHERE mp.status = 'approved'
+                  AND mp.total > 0
+                  AND mp.financeiro_lancado_at IS NULL
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM financeiro f
+                      WHERE f.tipo = 'Receita'
+                        AND f.categoria = 'Venda Site (Mercado Pago)'
+                        AND f.descricao LIKE CONCAT('%', mp.external_reference, '%')
+                  )
+            ");
+
+            $this->conn->exec("
+                UPDATE mercado_pago_pedidos mp
+                SET mp.financeiro_lancado_at = NOW()
+                WHERE mp.status = 'approved'
+                  AND mp.financeiro_lancado_at IS NULL
+                  AND EXISTS (
+                      SELECT 1
+                      FROM financeiro f
+                      WHERE f.tipo = 'Receita'
+                        AND f.categoria = 'Venda Site (Mercado Pago)'
+                        AND f.descricao LIKE CONCAT('%', mp.external_reference, '%')
+                  )
+            ");
+        } catch (\Throwable $e) {
+            error_log('Nao foi possivel sincronizar vendas Mercado Pago no financeiro: ' . $e->getMessage());
+        }
+    }
+
+    public static function getInstance()
+    {
+        if (!self::$instance) {
+            self::$instance = new Database();
+        }
+        return self::$instance->getConnection();
+    }
+
+    public function getConnection()
+    {
+        return $this->conn;
+    }
+}

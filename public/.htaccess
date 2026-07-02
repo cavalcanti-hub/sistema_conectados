@@ -1,0 +1,16 @@
+DirectoryIndex index.php index.html
+Options -Indexes
+
+AddType application/manifest+json .webmanifest
+AddType application/javascript .js
+
+RewriteEngine On
+
+RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L]
+RewriteRule \.(env|ini|log|sql|zip|bak|old|orig)$ - [F,L]
+
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+RewriteRule ^ index.php [L,QSA]
