@@ -33,7 +33,10 @@ $saldoRestante = max(0, $valorTotalOs - $totalPago);
                     require __DIR__ . '/_device_selector.php';
                     ?>
                     <div class="form-group"><label class="form-label">IMEI / Nº Série</label><input type="text" name="imei" class="form-control" value="<?= htmlspecialchars($os['imei']??'') ?>"></div>
-                    <div class="form-group"><label class="form-label">Cor</label><input type="text" name="cor" class="form-control" value="<?= htmlspecialchars($os['cor']??'') ?>"></div>
+                    <?php
+                    $colorValue = $os['cor'] ?? '';
+                    require __DIR__ . '/_color_selector.php';
+                    ?>
                     <div class="form-group" style="grid-column:span 2;"><label class="form-label">Senha / Padrão</label><input type="text" name="senha_padrao" class="form-control" value="<?= htmlspecialchars($os['senha_padrao']??'') ?>"></div>
                     <div class="form-group" style="grid-column:span 2;"><label class="form-label">Estado Físico na Entrada</label><textarea name="estado_fisico" class="form-control" rows="2"><?= htmlspecialchars($os['estado_fisico']??'') ?></textarea></div>
                     <div class="form-group" style="grid-column:span 2;">

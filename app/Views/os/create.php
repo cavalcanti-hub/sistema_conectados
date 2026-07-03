@@ -35,7 +35,10 @@
                     require __DIR__ . '/_device_selector.php';
                     ?>
                     <div class="form-group"><label class="form-label">IMEI / Nº Série</label><input type="text" name="imei" class="form-control" placeholder="15 dígitos"></div>
-                    <div class="form-group"><label class="form-label">Cor</label><input type="text" name="cor" class="form-control" placeholder="Preto, Branco, Gold..."></div>
+                    <?php
+                    $colorValue = '';
+                    require __DIR__ . '/_color_selector.php';
+                    ?>
                     <div class="form-group" style="grid-column:span 2;"><label class="form-label">Senha / Padrão (informada pelo cliente)</label><input type="text" name="senha_padrao" class="form-control" placeholder="PIN ou padrão de desbloqueio"></div>
                 </div>
             </div>
