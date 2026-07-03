@@ -15,7 +15,7 @@
     <link rel="manifest" href="<?= app_url('manifest.webmanifest') ?>?v=20260703-electric-blue">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= app_url('assets/css/index.css') ?>?v=20260703-electric-blue">
+    <link rel="stylesheet" href="<?= app_url('assets/css/index.css') ?>?v=20260703-sidebar">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <style>
         .badge { display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600; }
@@ -50,8 +50,8 @@
     <div class="sidebar-overlay" id="overlay" onclick="document.body.classList.remove('sidebar-open');document.getElementById('overlay').classList.remove('active')"></div>
     
     <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header" style="padding:1.5rem 1rem;">
-            <img src="<?= app_url('assets/img/logo.png') ?>" alt="Conectados" style="width:100%;max-width:200px;height:auto;display:block;margin:0 auto;filter:brightness(1.42) saturate(1.12) drop-shadow(0 0 5px rgba(255,255,255,.86)) drop-shadow(0 0 16px rgba(96,190,255,.78)) drop-shadow(0 10px 20px rgba(0,0,0,.28));">
+        <div class="sidebar-header">
+            <img class="sidebar-logo" src="<?= app_url('assets/img/logo.png') ?>" alt="Conectados">
         </div>
         
         <nav>
@@ -86,14 +86,19 @@
             </ul>
         </nav>
 
-        <div style="padding:1rem;border-top:1px solid rgba(255,255,255,.05);margin-top:auto;">
-            <div style="display:flex;align-items:center;gap:10px;padding:10px;background:rgba(255,255,255,.05);border-radius:10px;">
-                <div style="width:36px;height:36px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--primary);flex-shrink:0;">A</div>
-                <div style="overflow:hidden;">
-                    <p style="font-size:.85rem;color:white;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Admin</p>
-                    <p style="font-size:.7rem;color:#64748b;">Administrador</p>
+        <?php
+        $sidebarUserName = trim((string) ($_SESSION['usuario_nome'] ?? 'Admin')) ?: 'Admin';
+        $sidebarUserRole = trim((string) ($_SESSION['perfil'] ?? 'Administrador')) ?: 'Administrador';
+        $sidebarInitial = strtoupper(substr($sidebarUserName, 0, 1) ?: 'A');
+        ?>
+        <div class="sidebar-user">
+            <div class="sidebar-user-panel">
+                <div class="sidebar-avatar"><?= e($sidebarInitial) ?></div>
+                <div class="sidebar-user-info">
+                    <p class="sidebar-user-name"><?= e($sidebarUserName) ?></p>
+                    <p class="sidebar-user-role"><?= e($sidebarUserRole) ?></p>
                 </div>
-                <a href="<?= e(route_url('logout')) ?>" style="margin-left:auto;color:#64748b;opacity:.7;" title="Sair"><i data-lucide="log-out" style="width:16px;"></i></a>
+                <a class="sidebar-logout" href="<?= e(route_url('logout')) ?>" title="Sair"><i data-lucide="log-out" style="width:16px;"></i></a>
             </div>
         </div>
     </aside>
