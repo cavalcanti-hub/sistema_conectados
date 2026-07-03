@@ -25,8 +25,13 @@ $saldoRestante = max(0, $valorTotalOs - $totalPago);
                     <i data-lucide="smartphone" style="width:18px;"></i> Dados do Aparelho
                 </h4>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
-                    <div class="form-group"><label class="form-label">Marca</label><input type="text" name="marca" class="form-control" value="<?= htmlspecialchars($os['marca']??'') ?>"></div>
-                    <div class="form-group"><label class="form-label">Modelo *</label><input type="text" name="modelo" class="form-control" required value="<?= htmlspecialchars($os['modelo']??'') ?>"></div>
+                    <?php
+                    $deviceValues = [
+                        'marca' => $os['marca'] ?? '',
+                        'modelo' => $os['modelo'] ?? '',
+                    ];
+                    require __DIR__ . '/_device_selector.php';
+                    ?>
                     <div class="form-group"><label class="form-label">IMEI / Nº Série</label><input type="text" name="imei" class="form-control" value="<?= htmlspecialchars($os['imei']??'') ?>"></div>
                     <div class="form-group"><label class="form-label">Cor</label><input type="text" name="cor" class="form-control" value="<?= htmlspecialchars($os['cor']??'') ?>"></div>
                     <div class="form-group" style="grid-column:span 2;"><label class="form-label">Senha / Padrão</label><input type="text" name="senha_padrao" class="form-control" value="<?= htmlspecialchars($os['senha_padrao']??'') ?>"></div>

@@ -30,8 +30,10 @@
                             <a href="<?= e(route_url('clientes/create')) ?>" class="btn btn-secondary" style="white-space:nowrap;text-decoration:none;"><i data-lucide="user-plus" style="width:16px;"></i> Novo</a>
                         </div>
                     </div>
-                    <div class="form-group"><label class="form-label">Marca</label><input type="text" name="marca" class="form-control" placeholder="Apple, Samsung..."></div>
-                    <div class="form-group"><label class="form-label">Modelo *</label><input type="text" name="modelo" class="form-control" placeholder="iPhone 14 Pro, Galaxy A32..." required></div>
+                    <?php
+                    $deviceValues = ['marca' => '', 'modelo' => ''];
+                    require __DIR__ . '/_device_selector.php';
+                    ?>
                     <div class="form-group"><label class="form-label">IMEI / Nº Série</label><input type="text" name="imei" class="form-control" placeholder="15 dígitos"></div>
                     <div class="form-group"><label class="form-label">Cor</label><input type="text" name="cor" class="form-control" placeholder="Preto, Branco, Gold..."></div>
                     <div class="form-group" style="grid-column:span 2;"><label class="form-label">Senha / Padrão (informada pelo cliente)</label><input type="text" name="senha_padrao" class="form-control" placeholder="PIN ou padrão de desbloqueio"></div>

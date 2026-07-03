@@ -84,7 +84,7 @@ if ($protectInternalRoutes && $module === 'login' && !empty($_SESSION['usuario_i
 $routes = [
     'dashboard'  => ['controller' => \App\Controllers\DashboardController::class, 'methods' => ['index']],
     'clientes'   => ['controller' => \App\Controllers\ClientesController::class, 'methods' => ['index','create','store','edit','update','delete','show']],
-    'os'         => ['controller' => \App\Controllers\OsController::class, 'methods' => ['index','create','store','edit','update','delete','viewDetail','print']],
+    'os'         => ['controller' => \App\Controllers\OsController::class, 'methods' => ['index','create','store','edit','update','delete','viewDetail','print','storeModelo']],
     'estoque'    => ['controller' => \App\Controllers\EstoqueController::class, 'methods' => ['index','create','store','edit','update','delete','movimentar']],
     'recados'    => ['controller' => \App\Controllers\RecadosController::class, 'methods' => ['index','store','updateStatus','delete']],
     'compras'    => ['controller' => \App\Controllers\ComprasController::class, 'methods' => ['index','print','store','updateStatus','delete']],
@@ -124,7 +124,7 @@ if (isset($routes[$module])) {
         'gastos_pessoais' => ['store', 'update', 'delete', 'addCategoria', 'deleteCategoria'],
         'login' => ['login'],
         'mercadolivre' => ['disconnect', 'publish'],
-        'os' => ['store', 'update', 'delete'],
+        'os' => ['store', 'update', 'delete', 'storeModelo'],
         'pdv' => ['finalizarVenda'],
         'produtos' => ['store', 'update', 'delete'],
         'recados' => ['store', 'updateStatus', 'delete'],

@@ -83,6 +83,14 @@ class Database
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 CONSTRAINT fk_aparelhos_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS aparelho_modelos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                marca VARCHAR(80) NOT NULL,
+                modelo VARCHAR(140) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uk_aparelho_modelos_marca_modelo (marca, modelo),
+                INDEX idx_aparelho_modelos_marca (marca)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             "CREATE TABLE IF NOT EXISTS servicos_referencia (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 nome VARCHAR(100) NOT NULL,
@@ -475,6 +483,7 @@ class Database
         $this->ensureIndex('termos_compra_venda', 'idx_termos_vendedor', 'vendedor_nome');
         $this->ensureIndex('termos_compra_venda', 'idx_termos_equipamento', 'marca_modelo');
 
+        $this->seedPhoneModels();
         $this->seedAdminFromEnv();
         $this->syncApprovedMercadoPagoFinanceiro();
 
@@ -582,6 +591,64 @@ class Database
             ':email' => $email,
             ':senha' => password_hash($password, PASSWORD_BCRYPT),
         ]);
+    }
+
+    private function seedPhoneModels(): void
+    {
+        $modelsByBrand = [
+            'Apple' => [
+                'iPhone 7', 'iPhone 7 Plus', 'iPhone 8', 'iPhone 8 Plus', 'iPhone X', 'iPhone XR',
+                'iPhone XS', 'iPhone XS Max', 'iPhone 11', 'iPhone 11 Pro', 'iPhone 11 Pro Max',
+                'iPhone 12', 'iPhone 12 Mini', 'iPhone 12 Pro', 'iPhone 12 Pro Max',
+                'iPhone 13', 'iPhone 13 Mini', 'iPhone 13 Pro', 'iPhone 13 Pro Max',
+                'iPhone 14', 'iPhone 14 Plus', 'iPhone 14 Pro', 'iPhone 14 Pro Max',
+                'iPhone 15', 'iPhone 15 Plus', 'iPhone 15 Pro', 'iPhone 15 Pro Max',
+            ],
+            'Samsung' => [
+                'Galaxy A03', 'Galaxy A04', 'Galaxy A05', 'Galaxy A10', 'Galaxy A11', 'Galaxy A12',
+                'Galaxy A13', 'Galaxy A14', 'Galaxy A15', 'Galaxy A20', 'Galaxy A21s', 'Galaxy A22',
+                'Galaxy A23', 'Galaxy A24', 'Galaxy A25', 'Galaxy A30', 'Galaxy A31', 'Galaxy A32',
+                'Galaxy A33', 'Galaxy A34', 'Galaxy A35', 'Galaxy A50', 'Galaxy A51', 'Galaxy A52',
+                'Galaxy A53', 'Galaxy A54', 'Galaxy A55', 'Galaxy M12', 'Galaxy M23', 'Galaxy M32',
+                'Galaxy M52', 'Galaxy S20', 'Galaxy S20 FE', 'Galaxy S21', 'Galaxy S21 FE',
+                'Galaxy S22', 'Galaxy S23', 'Galaxy S23 FE', 'Galaxy S24', 'Galaxy Note 10',
+                'Galaxy Note 20', 'Galaxy Z Flip 3', 'Galaxy Z Flip 4', 'Galaxy Z Flip 5',
+                'Galaxy Z Fold 3', 'Galaxy Z Fold 4', 'Galaxy Z Fold 5',
+            ],
+            'Motorola' => [
+                'Moto E6 Plus', 'Moto E7', 'Moto E7 Plus', 'Moto E13', 'Moto E20', 'Moto E22',
+                'Moto E32', 'Moto G8', 'Moto G8 Power', 'Moto G9', 'Moto G9 Play', 'Moto G10',
+                'Moto G20', 'Moto G22', 'Moto G30', 'Moto G31', 'Moto G32', 'Moto G42',
+                'Moto G52', 'Moto G53', 'Moto G54', 'Moto G60', 'Moto G71', 'Moto G72',
+                'Moto G73', 'Moto G84', 'Motorola Edge 20', 'Motorola Edge 30',
+                'Motorola Edge 40', 'Motorola Edge 50',
+            ],
+            'Xiaomi' => [
+                'Redmi 9', 'Redmi 9A', 'Redmi 9C', 'Redmi 10', 'Redmi 10C', 'Redmi 12',
+                'Redmi 12C', 'Redmi 13C', 'Redmi Note 8', 'Redmi Note 9', 'Redmi Note 10',
+                'Redmi Note 10 Pro', 'Redmi Note 11', 'Redmi Note 11 Pro', 'Redmi Note 12',
+                'Redmi Note 12 Pro', 'Redmi Note 13', 'Redmi Note 13 Pro', 'Poco C40',
+                'Poco M3', 'Poco M4 Pro', 'Poco M5', 'Poco X3', 'Poco X4 Pro', 'Poco X5',
+                'Poco X6', 'Mi 9', 'Mi 10', 'Mi 11', 'Xiaomi 12', 'Xiaomi 13',
+            ],
+            'LG' => ['K10', 'K11', 'K12', 'K22', 'K41S', 'K50S', 'K51S', 'K61', 'Q6', 'Q7', 'Velvet'],
+            'Asus' => ['Zenfone 4', 'Zenfone 5', 'Zenfone 6', 'Zenfone 8', 'Zenfone 9', 'ROG Phone 5', 'ROG Phone 6'],
+            'Realme' => ['Realme C11', 'Realme C21Y', 'Realme C25Y', 'Realme C35', 'Realme 7', 'Realme 8', 'Realme 9', 'Realme 10'],
+            'Huawei' => ['P20 Lite', 'P30 Lite', 'P40 Lite', 'Y6', 'Y7', 'Y9', 'Nova 5T'],
+            'Nokia' => ['Nokia 2.4', 'Nokia 3.4', 'Nokia 5.4', 'Nokia G10', 'Nokia G20', 'Nokia C20'],
+            'Positivo' => ['Twist 3', 'Twist 4', 'Twist 5', 'Twist Tab'],
+            'Multilaser' => ['MS50', 'MS60', 'G Max', 'G Pro'],
+        ];
+
+        $stmt = $this->conn->prepare("INSERT IGNORE INTO aparelho_modelos (marca, modelo) VALUES (:marca, :modelo)");
+        foreach ($modelsByBrand as $brand => $models) {
+            foreach ($models as $model) {
+                $stmt->execute([
+                    ':marca' => $brand,
+                    ':modelo' => $model,
+                ]);
+            }
+        }
     }
 
     private function ensureColumn(string $table, string $column, string $alterSql): void

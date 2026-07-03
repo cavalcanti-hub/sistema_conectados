@@ -44,6 +44,11 @@ class OsController extends Controller
         render_resource_view($templates[$mode] ?? $templates['80'], $payload);
     }
 
+    private function deviceBrandModels(): array
+    {
+        return (new \App\Models\AparelhoModel())->getModelosPorMarca();
+    }
+
     private function getOsUploadDir(): string
     {
         $dir = public_path('uploads/os');
@@ -110,7 +115,8 @@ class OsController extends Controller
             'title' => 'Nova OS - Conectados',
             'page_title' => 'Abrir Nova OS',
             'clientes' => $clientes,
-            'tecnicos' => $tecnicos
+            'tecnicos' => $tecnicos,
+            'deviceBrandModels' => $this->deviceBrandModels(),
         ]);
     }
 
@@ -125,6 +131,7 @@ class OsController extends Controller
 
         try {
             $aparelhoModel = new \App\Models\AparelhoModel();
+            $aparelhoModel->storeModelo($_POST['marca'] ?? 'Geral', $_POST['modelo'] ?? '');
             $aparelhoId = $aparelhoModel->create([
                 ':cliente_id' => $_POST['cliente_id'],
                 ':marca' => $_POST['marca'] ?? 'Geral',
@@ -180,6 +187,7 @@ class OsController extends Controller
             'pagamentos' => $this->model->getPagamentos($id),
             'totalPago' => $this->model->totalPagamentos($id),
             'tecnicos' => $tecnicos,
+            'deviceBrandModels' => $this->deviceBrandModels(),
             'status_list' => os_status_list()
         ]);
     }
@@ -196,6 +204,7 @@ class OsController extends Controller
         $db->beginTransaction();
 
         try {
+            (new \App\Models\AparelhoModel())->storeModelo($_POST['marca'] ?? $osAtual['marca'], $_POST['modelo'] ?? $osAtual['modelo']);
             $stmt = $db->prepare("UPDATE aparelhos SET marca=:marca, modelo=:modelo, imei=:imei, cor=:cor, senha_padrao=:senha_padrao, estado_fisico=:estado_fisico WHERE id=:id");
             $stmt->execute([
                 ':marca' => $_POST['marca'] ?? $osAtual['marca'],
@@ -255,6 +264,23 @@ class OsController extends Controller
         }
 
         $this->redirect(route_url('os/viewDetail', ['id' => $id, 'success' => 1]));
+    }
+
+    public function storeModelo()
+    {
+        header('Content-Type: application/json; charset=UTF-8');
+
+        $marca = trim((string) ($_POST['marca'] ?? ''));
+        $modelo = trim((string) ($_POST['modelo'] ?? ''));
+        if ($marca === '' || $modelo === '') {
+            http_response_code(422);
+            echo json_encode(['ok' => false, 'error' => 'invalid_model']);
+            exit;
+        }
+
+        $ok = (new \App\Models\AparelhoModel())->storeModelo($marca, $modelo);
+        echo json_encode(['ok' => $ok, 'marca' => $marca, 'modelo' => $modelo], JSON_UNESCAPED_UNICODE);
+        exit;
     }
 
     public function delete()
