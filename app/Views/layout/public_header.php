@@ -169,7 +169,7 @@ $shareImageType = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= e($title ?? 'Vitrine Virtual - Conectados') ?></title>
     <meta name="description" content="<?= htmlspecialchars($shareDescription, ENT_QUOTES) ?>">
-    <meta name="theme-color" content="#00349a">
+    <meta name="theme-color" content="#001233">
     <link rel="canonical" href="<?= htmlspecialchars($shareUrl, ENT_QUOTES) ?>">
     <meta property="og:type" content="<?= htmlspecialchars($shareType, ENT_QUOTES) ?>">
     <meta property="og:site_name" content="<?= htmlspecialchars($companyName, ENT_QUOTES) ?>">
@@ -197,7 +197,7 @@ $shareImageType = [
     <link rel="icon" type="image/png" sizes="32x32" href="<?= app_url('favicon.png') ?>">
     <link rel="icon" type="image/png" sizes="16x16" href="<?= app_url('assets/icons/icon-16x16.png') ?>">
     <link rel="apple-touch-icon" href="<?= app_url('assets/icons/icon-180x180.png') ?>">
-    <link rel="manifest" href="<?= app_url('manifest.webmanifest') ?>">
+    <link rel="manifest" href="<?= app_url('manifest.webmanifest') ?>?v=20260703-theme">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= app_url('assets/css/index.css') ?>?v=20260702-banner">

@@ -1,4 +1,4 @@
-const CACHE_NAME = "conectados-v20260702-banner";
+const CACHE_NAME = "conectados-v20260703-theme";
 
 const appUrl = (path = "") => new URL(path, self.registration.scope).toString();
 
@@ -10,7 +10,7 @@ const APP_SHELL = [
   appUrl("assets/icons/icon-192x192.png"),
   appUrl("assets/icons/icon-512x512.png"),
   appUrl("favicon.png"),
-  appUrl("manifest.webmanifest")
+  appUrl("manifest.webmanifest?v=20260703-theme")
 ];
 
 self.addEventListener("install", (event) => {
