@@ -52,7 +52,7 @@ $currentRoute = trim((string) ($_GET['url'] ?? 'dashboard'), '/');
 $dockMenuItems = [
     ['route' => 'dashboard', 'module' => 'dashboard', 'icon' => 'home', 'label' => 'Inicio'],
     ['route' => 'clientes', 'module' => 'clientes', 'icon' => 'users', 'label' => 'Clientes'],
-    ['route' => 'os', 'module' => 'os', 'icon' => 'file-text', 'label' => 'Ordens'],
+    ['route' => 'os', 'module' => 'os', 'excludeActiveRoutes' => ['os/create'], 'icon' => 'file-text', 'label' => 'Ordens'],
     ['route' => 'os/create', 'activeRoute' => 'os/create', 'icon' => 'plus-circle', 'label' => 'Nova OS'],
     ['route' => 'recados', 'module' => 'recados', 'icon' => 'messages-square', 'label' => 'Recados'],
     ['route' => 'produtos', 'module' => 'produtos', 'icon' => 'package', 'label' => 'Produtos'],
@@ -79,9 +79,16 @@ $systemUserInitial = strtoupper(substr($systemUserName, 0, 1) ?: 'A');
         <nav class="system-dock-nav" aria-label="Navegacao principal">
             <?php foreach ($dockMenuItems as $menuItem): ?>
             <?php
-            $isActive = isset($menuItem['activeRoute'])
+            $isExcludedActiveRoute = false;
+            foreach (($menuItem['excludeActiveRoutes'] ?? []) as $excludedRoute) {
+                if ($currentRoute === $excludedRoute || str_starts_with($currentRoute, $excludedRoute . '/')) {
+                    $isExcludedActiveRoute = true;
+                    break;
+                }
+            }
+            $isActive = !$isExcludedActiveRoute && isset($menuItem['activeRoute'])
                 ? str_starts_with($currentRoute, $menuItem['activeRoute'])
-                : ($current === ($menuItem['module'] ?? $menuItem['route']));
+                : (!$isExcludedActiveRoute && $current === ($menuItem['module'] ?? $menuItem['route']));
             ?>
             <a href="<?= e(route_url($menuItem['route'])) ?>" class="system-dock-link <?= $isActive ? 'active' : '' ?>">
                 <span class="system-dock-icon"><i data-lucide="<?= e($menuItem['icon']) ?>"></i></span>
