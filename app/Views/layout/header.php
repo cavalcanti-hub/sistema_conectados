@@ -16,6 +16,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= app_url('assets/css/index.css') ?>?v=20260703-compact-blue">
+    <?php foreach (($extraStyles ?? []) as $styleHref): ?>
+    <link rel="stylesheet" href="<?= e($styleHref) ?>">
+    <?php endforeach; ?>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <style>
         .badge { display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600; }
@@ -58,6 +61,7 @@ $dockMenuItems = [
     ['route' => 'produtos', 'module' => 'produtos', 'icon' => 'package', 'label' => 'Produtos'],
     ['route' => 'fornecedores', 'module' => 'fornecedores', 'icon' => 'truck', 'label' => 'Fornec.'],
     ['route' => 'compras', 'module' => 'compras', 'icon' => 'shopping-cart', 'label' => 'Compras'],
+    ['route' => 'checklist', 'module' => 'checklist', 'icon' => 'clipboard-list', 'label' => 'Checklists'],
     ['route' => 'termos', 'module' => 'termos', 'icon' => 'clipboard-check', 'label' => 'Termos'],
     ['route' => 'vitrine', 'module' => 'vitrine', 'icon' => 'monitor', 'label' => 'Vitrine'],
     ['route' => 'financeiro', 'module' => 'financeiro', 'icon' => 'wallet', 'label' => 'Financeiro'],

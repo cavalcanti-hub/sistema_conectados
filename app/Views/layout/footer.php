@@ -166,5 +166,8 @@ document.addEventListener('keydown', (event) => {
 
 try { localStorage.removeItem('theme'); } catch (error) {}
 </script>
+<?php foreach (($extraScripts ?? []) as $scriptSrc): ?>
+<script src="<?= e($scriptSrc) ?>"></script>
+<?php endforeach; ?>
 </body>
 </html>
