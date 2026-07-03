@@ -91,10 +91,10 @@ $statusColors = [
     </div>
 </div>
 
-<div class="dashboard-layout" style="display:grid;grid-template-columns:2fr 1fr;gap:1.5rem;margin-top:1.5rem;">
+<div class="dashboard-layout">
     <!-- Últimas OS -->
     <div class="card fade-in">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
             <h3 class="brand-font">Últimas Ordens de Serviço</h3>
             <a href="<?= route_url('os') ?>" style="font-size:.8rem;color:var(--secondary);text-decoration:none;font-weight:600;">Ver todas →</a>
         </div>
@@ -105,7 +105,7 @@ $statusColors = [
                 </thead>
                 <tbody>
                     <?php if(empty($recentes)): ?>
-                    <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">Nenhuma OS encontrada. <a href="<?= route_url('os/create') ?>">Abrir a primeira!</a></td></tr>
+                    <tr><td colspan="5" style="text-align:center;padding:1rem;color:var(--text-muted);">Nenhuma OS encontrada. <a href="<?= route_url('os/create') ?>">Abrir a primeira!</a></td></tr>
                     <?php else: ?>
                     <?php foreach($recentes as $os): ?>
                     <tr>
@@ -120,7 +120,7 @@ $statusColors = [
                 </tbody>
             </table>
         </div>
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;margin-top:1rem;">
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;margin-top:.65rem;">
             <button type="button" onclick="window.open('<?= route_url('dashboard', ['print' => 'a4']) ?>', '_blank')" class="btn btn-secondary" style="padding:8px 12px;">
                 <i data-lucide="printer"></i> Imprimir A4
             </button>
@@ -131,10 +131,10 @@ $statusColors = [
     </div>
 
     <!-- Alertas e Atalhos -->
-    <div style="display:flex;flex-direction:column;gap:1.5rem;">
+    <div class="dashboard-side-stack">
         <?php if(!empty($estoqueBaixo)): ?>
         <div class="card" style="border-left:4px solid var(--danger);">
-            <h4 class="brand-font" style="color:var(--danger);margin-bottom:1rem;display:flex;align-items:center;gap:8px;">
+            <h4 class="brand-font" style="color:var(--danger);margin-bottom:.65rem;display:flex;align-items:center;gap:8px;">
                 <i data-lucide="alert-triangle" style="width:18px;"></i> Estoque Crítico
             </h4>
             <?php foreach(array_slice($estoqueBaixo, 0, 4) as $item): ?>
@@ -170,13 +170,13 @@ $statusColors = [
         </div>
 
         <div class="card" style="background:var(--primary);color:white;">
-            <h4 class="brand-font" style="margin-bottom:1rem;color:var(--accent);">Resumo Financeiro</h4>
-            <div style="display:flex;flex-direction:column;gap:.75rem;">
+            <h4 class="brand-font" style="margin-bottom:.65rem;color:var(--accent);">Resumo Financeiro</h4>
+            <div style="display:flex;flex-direction:column;gap:.5rem;">
                 <div style="display:flex;justify-content:space-between;">
                     <span style="color:#94a3b8;font-size:.85rem;">Receitas (mês)</span>
                     <span style="color:#4ade80;font-weight:600;">R$ <?= number_format($receitas_mes, 2, ',', '.') ?></span>
                 </div>
-                <div style="display:flex;justify-content:space-between;padding-bottom:.75rem;border-bottom:1px solid rgba(255,255,255,.1);">
+                <div style="display:flex;justify-content:space-between;padding-bottom:.5rem;border-bottom:1px solid rgba(255,255,255,.1);">
                     <span style="color:#94a3b8;font-size:.85rem;">Despesas (mês)</span>
                     <span style="color:#f87171;font-weight:600;">R$ <?= number_format($despesas_mes, 2, ',', '.') ?></span>
                 </div>
