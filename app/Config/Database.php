@@ -603,6 +603,9 @@ class Database
                 'iPhone 13', 'iPhone 13 Mini', 'iPhone 13 Pro', 'iPhone 13 Pro Max',
                 'iPhone 14', 'iPhone 14 Plus', 'iPhone 14 Pro', 'iPhone 14 Pro Max',
                 'iPhone 15', 'iPhone 15 Plus', 'iPhone 15 Pro', 'iPhone 15 Pro Max',
+                'iPhone 16', 'iPhone 16 Plus', 'iPhone 16 Pro', 'iPhone 16 Pro Max',
+                'iPhone 16e', 'iPhone 17', 'iPhone 17 Pro', 'iPhone 17 Pro Max',
+                'iPhone 17e', 'iPhone Air',
             ],
             'Samsung' => [
                 'Galaxy Core', 'Galaxy Core 2', 'Galaxy Core Prime', 'Galaxy Grand Prime',
