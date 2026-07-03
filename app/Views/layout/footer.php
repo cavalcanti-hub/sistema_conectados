@@ -22,7 +22,7 @@
 <script>
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        const swUrl = '<?= app_url('sw.js') ?>?v=20260703-logo-glow';
+        const swUrl = '<?= app_url('sw.js') ?>?v=20260703-gold-dock';
         navigator.serviceWorker.getRegistrations()
             .then((registrations) => Promise.all(registrations.map((registration) => {
                 const scriptUrl = registration.active?.scriptURL || registration.waiting?.scriptURL || registration.installing?.scriptURL || '';
@@ -37,13 +37,13 @@ lucide.createIcons();
 
 let systemConfirmCallback = null;
 
-document.querySelectorAll('.system-nav-menu').forEach((menu) => {
+document.querySelectorAll('.system-nav-menu, .system-dock-user').forEach((menu) => {
     menu.addEventListener('toggle', () => {
         if (!menu.open) {
             return;
         }
 
-        document.querySelectorAll('.system-nav-menu[open]').forEach((openMenu) => {
+        document.querySelectorAll('.system-nav-menu[open], .system-dock-user[open]').forEach((openMenu) => {
             if (openMenu !== menu) {
                 openMenu.open = false;
             }
@@ -52,11 +52,11 @@ document.querySelectorAll('.system-nav-menu').forEach((menu) => {
 });
 
 document.addEventListener('click', (event) => {
-    if (event.target.closest('.system-nav-menu')) {
+    if (event.target.closest('.system-nav-menu, .system-dock-user')) {
         return;
     }
 
-    document.querySelectorAll('.system-nav-menu[open]').forEach((menu) => {
+    document.querySelectorAll('.system-nav-menu[open], .system-dock-user[open]').forEach((menu) => {
         menu.open = false;
     });
 });
@@ -158,7 +158,7 @@ document.addEventListener('submit', (event) => {
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
         fecharConfirmSistema();
-        document.querySelectorAll('.system-nav-menu[open]').forEach((menu) => {
+        document.querySelectorAll('.system-nav-menu[open], .system-dock-user[open]').forEach((menu) => {
             menu.open = false;
         });
     }

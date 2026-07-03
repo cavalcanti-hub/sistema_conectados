@@ -15,7 +15,7 @@
     <link rel="manifest" href="<?= app_url('manifest.webmanifest') ?>?v=20260703-electric-blue">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= app_url('assets/css/index.css') ?>?v=20260703-logo-glow">
+    <link rel="stylesheet" href="<?= app_url('assets/css/index.css') ?>?v=20260703-gold-dock">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <style>
         .badge { display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600; }
@@ -48,24 +48,23 @@
 <body>
 <?php
 $current = explode('/', ($_GET['url'] ?? 'dashboard'))[0];
-$primaryMenuItems = [
-    'dashboard' => ['icon' => 'layout-dashboard', 'label' => 'Dashboard'],
-    'os' => ['icon' => 'file-text', 'label' => 'OS'],
-    'clientes' => ['icon' => 'users', 'label' => 'Clientes'],
-    'produtos' => ['icon' => 'shopping-bag', 'label' => 'Produtos'],
-    'financeiro' => ['icon' => 'dollar-sign', 'label' => 'Financeiro'],
-    'pdv' => ['icon' => 'shopping-cart', 'label' => 'PDV'],
-];
-$moreMenuItems = [
-    'recados' => ['icon' => 'message-square-text', 'label' => 'Recados'],
-    'fornecedores' => ['icon' => 'truck', 'label' => 'Fornecedores'],
-    'compras' => ['icon' => 'clipboard-list', 'label' => 'Solicitacoes de Compra'],
-    'termos' => ['icon' => 'file-signature', 'label' => 'Termos Compra/Venda'],
-    'vitrine' => ['icon' => 'monitor', 'label' => 'Vitrine Virtual'],
-    'gastos_pessoais' => ['icon' => 'wallet', 'label' => 'Gastos Pessoais'],
-    'usuarios' => ['icon' => 'user-cog', 'label' => 'Usuarios'],
-    'relatorios' => ['icon' => 'bar-chart-3', 'label' => 'Relatorios'],
-    'config' => ['icon' => 'settings', 'label' => 'Configuracoes'],
+$currentRoute = trim((string) ($_GET['url'] ?? 'dashboard'), '/');
+$dockMenuItems = [
+    ['route' => 'dashboard', 'module' => 'dashboard', 'icon' => 'home', 'label' => 'Inicio'],
+    ['route' => 'clientes', 'module' => 'clientes', 'icon' => 'users', 'label' => 'Clientes'],
+    ['route' => 'os', 'module' => 'os', 'icon' => 'file-text', 'label' => 'Ordens'],
+    ['route' => 'os/create', 'activeRoute' => 'os/create', 'icon' => 'plus-circle', 'label' => 'Nova OS'],
+    ['route' => 'recados', 'module' => 'recados', 'icon' => 'messages-square', 'label' => 'Recados'],
+    ['route' => 'produtos', 'module' => 'produtos', 'icon' => 'package', 'label' => 'Produtos'],
+    ['route' => 'fornecedores', 'module' => 'fornecedores', 'icon' => 'truck', 'label' => 'Fornec.'],
+    ['route' => 'compras', 'module' => 'compras', 'icon' => 'shopping-cart', 'label' => 'Compras'],
+    ['route' => 'termos', 'module' => 'termos', 'icon' => 'clipboard-check', 'label' => 'Termos'],
+    ['route' => 'vitrine', 'module' => 'vitrine', 'icon' => 'monitor', 'label' => 'Vitrine'],
+    ['route' => 'financeiro', 'module' => 'financeiro', 'icon' => 'wallet', 'label' => 'Financeiro'],
+    ['route' => 'pdv', 'module' => 'pdv', 'icon' => 'badge-dollar-sign', 'label' => 'PDV'],
+    ['route' => 'relatorios', 'module' => 'relatorios', 'icon' => 'bar-chart-3', 'label' => 'Relatorios'],
+    ['route' => 'usuarios', 'module' => 'usuarios', 'icon' => 'id-card', 'label' => 'Usuarios'],
+    ['route' => 'config', 'module' => 'config', 'icon' => 'settings', 'label' => 'Config.'],
 ];
 $systemUserName = trim((string) ($_SESSION['usuario_nome'] ?? 'Admin')) ?: 'Admin';
 $systemUserRole = trim((string) ($_SESSION['perfil'] ?? 'Administrador')) ?: 'Administrador';
@@ -77,50 +76,33 @@ $systemUserInitial = strtoupper(substr($systemUserName, 0, 1) ?: 'A');
             <img src="<?= app_url('assets/img/logo.png') ?>" alt="Conectados">
         </a>
 
-        <nav class="system-primary-nav" aria-label="Navegacao principal">
-            <?php foreach ($primaryMenuItems as $url => $menuItem): ?>
-            <a href="<?= e(route_url($url)) ?>" class="system-nav-link <?= $current === $url ? 'active' : '' ?>">
-                <i data-lucide="<?= e($menuItem['icon']) ?>"></i>
-                <span><?= e($menuItem['label']) ?></span>
+        <nav class="system-dock-nav" aria-label="Navegacao principal">
+            <?php foreach ($dockMenuItems as $menuItem): ?>
+            <?php
+            $isActive = isset($menuItem['activeRoute'])
+                ? str_starts_with($currentRoute, $menuItem['activeRoute'])
+                : ($current === ($menuItem['module'] ?? $menuItem['route']));
+            ?>
+            <a href="<?= e(route_url($menuItem['route'])) ?>" class="system-dock-link <?= $isActive ? 'active' : '' ?>">
+                <span class="system-dock-icon"><i data-lucide="<?= e($menuItem['icon']) ?>"></i></span>
+                <span class="system-dock-label"><?= e($menuItem['label']) ?></span>
             </a>
             <?php endforeach; ?>
         </nav>
 
-        <div class="system-nav-tools">
-            <details class="system-nav-menu">
-                <summary>
-                    <i data-lucide="panel-top-open"></i>
-                    <span>Mais</span>
-                </summary>
-                <div class="system-nav-menu-panel system-more-panel">
-                    <?php foreach ($moreMenuItems as $url => $menuItem): ?>
-                    <a href="<?= e(route_url($url)) ?>" class="system-more-link <?= $current === $url ? 'active' : '' ?>">
-                        <i data-lucide="<?= e($menuItem['icon']) ?>"></i>
-                        <span><?= e($menuItem['label']) ?></span>
-                    </a>
-                    <?php endforeach; ?>
-                    <a href="<?= e(route_url('logout')) ?>" class="system-more-link system-mobile-account">
-                        <i data-lucide="log-out"></i>
-                        <span>Sair</span>
-                    </a>
+        <details class="system-dock-user">
+            <summary>
+                <span class="system-dock-icon system-user-avatar"><?= e($systemUserInitial) ?></span>
+                <span class="system-dock-label">Conta</span>
+            </summary>
+            <div class="system-nav-menu-panel system-user-panel">
+                <div>
+                    <strong><?= e($systemUserName) ?></strong>
+                    <small><?= e($systemUserRole) ?></small>
                 </div>
-            </details>
-
-            <details class="system-nav-menu system-user-menu">
-                <summary>
-                    <span class="system-user-avatar"><?= e($systemUserInitial) ?></span>
-                    <span class="system-user-label"><?= e($systemUserName) ?></span>
-                    <i data-lucide="chevron-down"></i>
-                </summary>
-                <div class="system-nav-menu-panel system-user-panel">
-                    <div>
-                        <strong><?= e($systemUserName) ?></strong>
-                        <small><?= e($systemUserRole) ?></small>
-                    </div>
-                    <a href="<?= e(route_url('logout')) ?>"><i data-lucide="log-out"></i> Sair</a>
-                </div>
-            </details>
-        </div>
+                <a href="<?= e(route_url('logout')) ?>"><i data-lucide="log-out"></i> Sair</a>
+            </div>
+        </details>
     </header>
 
     <div class="sidebar-overlay" id="overlay" onclick="document.body.classList.remove('sidebar-open');document.getElementById('overlay').classList.remove('active')"></div>
