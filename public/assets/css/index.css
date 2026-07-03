@@ -93,7 +93,12 @@ h1, h2, h3, h4, .brand-font {
     width: clamp(142px, 14vw, 186px);
     height: auto;
     display: block;
-    filter: drop-shadow(0 5px 13px rgba(0,0,0,.32)) drop-shadow(0 0 9px rgba(255,255,255,.18));
+    filter:
+        brightness(1.36)
+        saturate(1.16)
+        drop-shadow(0 0 5px rgba(255,255,255,.86))
+        drop-shadow(0 0 16px rgba(96,190,255,.78))
+        drop-shadow(0 8px 18px rgba(0,0,0,.3));
 }
 
 .system-primary-nav {

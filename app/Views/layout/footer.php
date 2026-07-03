@@ -22,7 +22,7 @@
 <script>
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        const swUrl = '<?= app_url('sw.js') ?>?v=20260703-topnav';
+        const swUrl = '<?= app_url('sw.js') ?>?v=20260703-logo-glow';
         navigator.serviceWorker.getRegistrations()
             .then((registrations) => Promise.all(registrations.map((registration) => {
                 const scriptUrl = registration.active?.scriptURL || registration.waiting?.scriptURL || registration.installing?.scriptURL || '';
