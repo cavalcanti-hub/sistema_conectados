@@ -22,7 +22,7 @@
 <script>
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        const swUrl = '<?= app_url('sw.js') ?>?v=20260702-banner';
+        const swUrl = '<?= app_url('sw.js') ?>?v=20260703-topnav';
         navigator.serviceWorker.getRegistrations()
             .then((registrations) => Promise.all(registrations.map((registration) => {
                 const scriptUrl = registration.active?.scriptURL || registration.waiting?.scriptURL || registration.installing?.scriptURL || '';
@@ -36,6 +36,30 @@ if ('serviceWorker' in navigator) {
 lucide.createIcons();
 
 let systemConfirmCallback = null;
+
+document.querySelectorAll('.system-nav-menu').forEach((menu) => {
+    menu.addEventListener('toggle', () => {
+        if (!menu.open) {
+            return;
+        }
+
+        document.querySelectorAll('.system-nav-menu[open]').forEach((openMenu) => {
+            if (openMenu !== menu) {
+                openMenu.open = false;
+            }
+        });
+    });
+});
+
+document.addEventListener('click', (event) => {
+    if (event.target.closest('.system-nav-menu')) {
+        return;
+    }
+
+    document.querySelectorAll('.system-nav-menu[open]').forEach((menu) => {
+        menu.open = false;
+    });
+});
 
 document.querySelectorAll('.system-flash').forEach((flash) => {
     window.setTimeout(() => {
@@ -134,6 +158,9 @@ document.addEventListener('submit', (event) => {
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
         fecharConfirmSistema();
+        document.querySelectorAll('.system-nav-menu[open]').forEach((menu) => {
+            menu.open = false;
+        });
     }
 });
 

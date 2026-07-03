@@ -15,7 +15,7 @@
     <link rel="manifest" href="<?= app_url('manifest.webmanifest') ?>?v=20260703-electric-blue">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= app_url('assets/css/index.css') ?>?v=20260703-sidebar">
+    <link rel="stylesheet" href="<?= app_url('assets/css/index.css') ?>?v=20260703-topnav">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <style>
         .badge { display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600; }
@@ -46,7 +46,83 @@
     </style>
 </head>
 <body>
+<?php
+$current = explode('/', ($_GET['url'] ?? 'dashboard'))[0];
+$primaryMenuItems = [
+    'dashboard' => ['icon' => 'layout-dashboard', 'label' => 'Dashboard'],
+    'os' => ['icon' => 'file-text', 'label' => 'OS'],
+    'clientes' => ['icon' => 'users', 'label' => 'Clientes'],
+    'produtos' => ['icon' => 'shopping-bag', 'label' => 'Produtos'],
+    'financeiro' => ['icon' => 'dollar-sign', 'label' => 'Financeiro'],
+    'pdv' => ['icon' => 'shopping-cart', 'label' => 'PDV'],
+];
+$moreMenuItems = [
+    'recados' => ['icon' => 'message-square-text', 'label' => 'Recados'],
+    'fornecedores' => ['icon' => 'truck', 'label' => 'Fornecedores'],
+    'compras' => ['icon' => 'clipboard-list', 'label' => 'Solicitacoes de Compra'],
+    'termos' => ['icon' => 'file-signature', 'label' => 'Termos Compra/Venda'],
+    'vitrine' => ['icon' => 'monitor', 'label' => 'Vitrine Virtual'],
+    'gastos_pessoais' => ['icon' => 'wallet', 'label' => 'Gastos Pessoais'],
+    'usuarios' => ['icon' => 'user-cog', 'label' => 'Usuarios'],
+    'relatorios' => ['icon' => 'bar-chart-3', 'label' => 'Relatorios'],
+    'config' => ['icon' => 'settings', 'label' => 'Configuracoes'],
+];
+$systemUserName = trim((string) ($_SESSION['usuario_nome'] ?? 'Admin')) ?: 'Admin';
+$systemUserRole = trim((string) ($_SESSION['perfil'] ?? 'Administrador')) ?: 'Administrador';
+$systemUserInitial = strtoupper(substr($systemUserName, 0, 1) ?: 'A');
+?>
 <div class="app-container">
+    <header class="system-topnav">
+        <a class="system-brand" href="<?= e(route_url('dashboard')) ?>" aria-label="Ir para o Dashboard">
+            <img src="<?= app_url('assets/img/logo.png') ?>" alt="Conectados">
+        </a>
+
+        <nav class="system-primary-nav" aria-label="Navegacao principal">
+            <?php foreach ($primaryMenuItems as $url => $menuItem): ?>
+            <a href="<?= e(route_url($url)) ?>" class="system-nav-link <?= $current === $url ? 'active' : '' ?>">
+                <i data-lucide="<?= e($menuItem['icon']) ?>"></i>
+                <span><?= e($menuItem['label']) ?></span>
+            </a>
+            <?php endforeach; ?>
+        </nav>
+
+        <div class="system-nav-tools">
+            <details class="system-nav-menu">
+                <summary>
+                    <i data-lucide="panel-top-open"></i>
+                    <span>Mais</span>
+                </summary>
+                <div class="system-nav-menu-panel system-more-panel">
+                    <?php foreach ($moreMenuItems as $url => $menuItem): ?>
+                    <a href="<?= e(route_url($url)) ?>" class="system-more-link <?= $current === $url ? 'active' : '' ?>">
+                        <i data-lucide="<?= e($menuItem['icon']) ?>"></i>
+                        <span><?= e($menuItem['label']) ?></span>
+                    </a>
+                    <?php endforeach; ?>
+                    <a href="<?= e(route_url('logout')) ?>" class="system-more-link system-mobile-account">
+                        <i data-lucide="log-out"></i>
+                        <span>Sair</span>
+                    </a>
+                </div>
+            </details>
+
+            <details class="system-nav-menu system-user-menu">
+                <summary>
+                    <span class="system-user-avatar"><?= e($systemUserInitial) ?></span>
+                    <span class="system-user-label"><?= e($systemUserName) ?></span>
+                    <i data-lucide="chevron-down"></i>
+                </summary>
+                <div class="system-nav-menu-panel system-user-panel">
+                    <div>
+                        <strong><?= e($systemUserName) ?></strong>
+                        <small><?= e($systemUserRole) ?></small>
+                    </div>
+                    <a href="<?= e(route_url('logout')) ?>"><i data-lucide="log-out"></i> Sair</a>
+                </div>
+            </details>
+        </div>
+    </header>
+
     <div class="sidebar-overlay" id="overlay" onclick="document.body.classList.remove('sidebar-open');document.getElementById('overlay').classList.remove('active')"></div>
     
     <aside class="sidebar" id="sidebar">
@@ -106,9 +182,6 @@
     <main class="main">
         <header class="app-topbar">
             <div class="app-topbar-title" style="display:flex;align-items:center;gap:12px;">
-                <button class="mobile-toggle" onclick="document.body.classList.toggle('sidebar-open');document.getElementById('overlay').classList.toggle('active')">
-                    <i data-lucide="menu" style="color:var(--primary);"></i>
-                </button>
                 <div>
                     <h1 style="font-size:1.5rem;font-family:'Outfit',sans-serif;"><?= e($page_title ?? '') ?></h1>
                     <p style="color:var(--text-muted);font-size:.85rem;"><?= date('l, d \d\e F \d\e Y') ?></p>
