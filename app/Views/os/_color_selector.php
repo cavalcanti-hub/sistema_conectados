@@ -57,14 +57,16 @@ $customColor = $currentColor !== '' && !$isKnownColor ? $currentColor : '';
             <?php endforeach; ?>
             <option value="__custom__" <?= $customColor !== '' ? 'selected' : '' ?>>Outra cor...</option>
         </select>
-        <span class="os-color-swatch" aria-hidden="true"></span>
+        <span class="os-color-swatch" aria-hidden="true" hidden></span>
     </div>
     <input type="text" class="form-control os-color-custom" placeholder="Digite a cor" value="<?= e($customColor) ?>" <?= $customColor === '' ? 'hidden' : '' ?> style="margin-top:.5rem;">
 </div>
 
 <style>
-    .os-color-row { display:grid;grid-template-columns:minmax(0,1fr) 46px;gap:.5rem;align-items:center; }
+    .os-color-row { display:grid;grid-template-columns:1fr;gap:.5rem;align-items:center; }
+    .os-color-row.has-swatch { grid-template-columns:minmax(0,1fr) 46px; }
     .os-color-swatch { width:46px;height:46px;border:1px solid var(--border);border-radius:8px;background:#f8fafc;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35); }
+    .os-color-swatch[hidden] { display:none; }
 </style>
 
 <script>
@@ -79,6 +81,7 @@ $customColor = $currentColor !== '' && !$isKnownColor ? $currentColor : '';
         const hidden = field.querySelector('.os-color-value');
         const custom = field.querySelector('.os-color-custom');
         const swatch = field.querySelector('.os-color-swatch');
+        const row = field.querySelector('.os-color-row');
         const form = field.closest('form');
 
         function currentValue() {
@@ -95,6 +98,9 @@ $customColor = $currentColor !== '' && !$isKnownColor ? $currentColor : '';
             hidden.value = currentValue();
 
             const color = selected?.dataset?.color || '#f8fafc';
+            const showSwatch = !isCustom && !!select.value;
+            swatch.hidden = !showSwatch;
+            row?.classList.toggle('has-swatch', showSwatch);
             swatch.style.background = isCustom ? '#f8fafc' : color;
             swatch.style.backgroundImage = isCustom
                 ? 'linear-gradient(135deg, #f8fafc 0 45%, #cbd5e1 45% 55%, #f8fafc 55% 100%)'
