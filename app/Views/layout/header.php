@@ -15,7 +15,7 @@
     <link rel="manifest" href="<?= app_url('manifest.webmanifest') ?>?v=20260703-electric-blue">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= app_url('assets/css/index.css') ?>?v=20260703-gold-dock">
+    <link rel="stylesheet" href="<?= app_url('assets/css/index.css') ?>?v=20260703-blue-dock">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <style>
         .badge { display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600; }
