@@ -1,16 +1,16 @@
-const CACHE_NAME = "conectados-v20260702-banner";
+const CACHE_NAME = "conectados-v20260703-electric-blue";
 
 const appUrl = (path = "") => new URL(path, self.registration.scope).toString();
 
 const APP_SHELL = [
   appUrl(""),
   appUrl("index.php"),
-  appUrl("assets/css/index.css?v=20260702-banner"),
+  appUrl("assets/css/index.css?v=20260703-electric-blue"),
   appUrl("assets/img/logo.png"),
   appUrl("assets/icons/icon-192x192.png"),
   appUrl("assets/icons/icon-512x512.png"),
   appUrl("favicon.png"),
-  appUrl("manifest.webmanifest")
+  appUrl("manifest.webmanifest?v=20260703-electric-blue")
 ];
 
 self.addEventListener("install", (event) => {

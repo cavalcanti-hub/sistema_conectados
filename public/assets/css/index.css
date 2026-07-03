@@ -2,9 +2,9 @@
 
 :root {
     /* Color Palette - Obsidian & Silver (Modern Tech) */
-    --primary: #00349a;      /* Azul Oficial da Marca */
-    --primary-dark: #00287a;
-    --accent: #00349a;       /* Usamos o azul como acento tb para consistência */
+    --primary: #2d2dff;      /* Azul vivo inspirado no tema do navegador */
+    --primary-dark: #1f1fd6;
+    --accent: #2d2dff;
     --success: #10b981;
     --danger: #ef4444;
     --warning: #f59e0b;
@@ -15,7 +15,7 @@
     --text-muted: #334155;
     --border: #cbd5e1;
     
-    --sidebar-bg: #00349a;    /* Restaurando o azul oficial no tema claro */
+    --sidebar-bg: #2d2dff;
     --sidebar-width: 260px;
     --header-height: 70px;
     --radius: 10px;
