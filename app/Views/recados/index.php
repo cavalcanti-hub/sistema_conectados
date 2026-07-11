@@ -11,29 +11,58 @@ $statusColors = [
     'Respondido' => 'badge-green',
     'Arquivado' => 'badge-gray',
 ];
+$statusIcons = [
+    'Pendente' => 'clock-alert',
+    'Lido' => 'eye',
+    'Respondido' => 'message-circle-check',
+    'Arquivado' => 'archive',
+];
+$statusAccent = [
+    'Pendente' => '#f59e0b',
+    'Lido' => '#2563eb',
+    'Respondido' => '#10b981',
+    'Arquivado' => '#64748b',
+];
 ?>
 
 <style>
-    .messages-page { display:grid;gap:1.25rem; }
-    .messages-hero {
-        display:flex;align-items:center;justify-content:space-between;gap:1rem;
-        background:linear-gradient(135deg,#002b7a,#0b63ce);color:#fff;border-radius:18px;
-        padding:1.4rem 1.5rem;box-shadow:0 18px 45px -28px rgba(15,47,111,.7);
+    .messages-page { display:grid;gap:.55rem; }
+    .messages-summary { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.55rem; }
+    .message-summary-card {
+        --message-accent: var(--secondary);
+        display:flex;
+        align-items:center;
+        gap:.55rem;
+        min-height:54px;
+        background:var(--bg-card);
+        border:1px solid var(--border);
+        border-left:4px solid var(--message-accent);
+        border-radius:var(--radius);
+        padding:.62rem .8rem;
+        box-shadow:var(--shadow);
+        transition:transform .2s, box-shadow .2s;
     }
-    .messages-hero h2 { font-family:'Outfit',sans-serif;font-size:1.35rem;margin:0 0 .25rem; }
-    .messages-hero p { margin:0;color:rgba(255,255,255,.78);font-size:.9rem; }
-    .messages-hero i { width:46px;height:46px;opacity:.88; }
-    .messages-summary { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.85rem; }
-    .message-summary-card { background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1rem;box-shadow:var(--shadow-sm); }
-    .message-summary-card span { display:block;color:var(--text-muted);font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em; }
-    .message-summary-card strong { display:block;font-family:'Outfit',sans-serif;font-size:1.6rem;color:var(--primary);margin-top:.2rem; }
-    .messages-panel { background:var(--bg-card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-sm);padding:1.25rem; }
-    .messages-panel h3 { font-family:'Outfit',sans-serif;font-size:1.05rem;margin:0 0 1rem;color:var(--text-main); }
-    .message-form-grid { display:grid;grid-template-columns:minmax(210px,1fr) minmax(170px,.8fr) 150px auto;gap:.85rem;align-items:end; }
+    .message-summary-card:hover { transform:translateY(-2px);box-shadow:var(--shadow-lg); }
+    .message-summary-icon {
+        width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+        background:color-mix(in srgb, var(--message-accent) 12%, white);
+        color:var(--message-accent);
+    }
+    .message-summary-icon i { width:17px;height:17px; }
+    .message-summary-info span { display:block;color:var(--text-muted);font-size:.76rem;font-weight:500; }
+    .message-summary-info strong { display:block;font-family:'Outfit',sans-serif;font-size:1.05rem;font-weight:700;color:var(--primary);margin-top:0; }
+    .messages-panel { background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-sm);padding:.68rem .85rem; }
+    .messages-panel h3 { font-family:'Outfit',sans-serif;font-size:.98rem;margin:0 0 .48rem;color:var(--text-main); }
+    .message-form-grid { display:grid;grid-template-columns:minmax(210px,1fr) minmax(170px,.8fr) 150px auto;gap:.5rem;align-items:end; }
     .message-form-text { grid-column:1 / -2; }
-    .message-form-submit { height:46px;justify-content:center; }
-    .message-filters { display:grid;grid-template-columns:minmax(220px,1fr) 170px auto;gap:.75rem;align-items:end;margin-bottom:1rem; }
-    .message-list { display:grid;gap:.85rem; }
+    .message-form-submit { min-height:38px;height:38px;justify-content:center;padding:8px 12px; }
+    .messages-panel .form-group { margin-bottom:.38rem; }
+    .messages-panel .form-label,
+    .messages-panel label { font-size:.82rem;margin-bottom:.25rem; }
+    .messages-panel .form-control { min-height:38px;padding:8px 12px; }
+    .messages-panel textarea.form-control { min-height:56px; }
+    .message-filters { display:grid;grid-template-columns:minmax(220px,1fr) 150px auto;gap:.5rem;align-items:end;margin-bottom:.5rem; }
+    .message-list { display:grid;gap:.5rem; }
     .message-card {
         display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1rem;
         border:1px solid var(--border);border-radius:14px;padding:1rem;background:#fff;
@@ -50,7 +79,7 @@ $statusColors = [
         display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
     }
     .icon-action.danger { color:var(--danger); }
-    .empty-state { text-align:center;padding:2.5rem 1rem;color:var(--text-muted);border:1px dashed var(--border);border-radius:14px;background:#f8fafc; }
+    .empty-state { text-align:center;padding:1rem;color:var(--text-muted);border:1px dashed var(--border);border-radius:12px;background:#f8fafc; }
     @media(max-width:980px){
         .messages-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
         .message-form-grid { grid-template-columns:1fr 1fr; }
@@ -61,7 +90,6 @@ $statusColors = [
     @media(max-width:680px){
         .message-form-grid,.message-filters { grid-template-columns:1fr; }
         .messages-summary { grid-template-columns:1fr; }
-        .messages-hero { align-items:flex-start; }
         .status-form { flex-wrap:wrap; }
     }
 </style>
@@ -79,19 +107,16 @@ $statusColors = [
 <?php endif; ?>
 
 <section class="messages-page">
-    <div class="messages-hero">
-        <div>
-            <h2>Agenda de recados do proprietario</h2>
-            <p>Registre quem ligou, o telefone para retorno e o assunto deixado para a loja.</p>
-        </div>
-        <i data-lucide="message-square-text"></i>
-    </div>
-
     <div class="messages-summary">
         <?php foreach ($statuses as $status): ?>
-            <div class="message-summary-card">
-                <span><?= htmlspecialchars($status) ?></span>
-                <strong><?= (int) ($resumo[$status] ?? 0) ?></strong>
+            <div class="message-summary-card" style="--message-accent: <?= e($statusAccent[$status] ?? '#2563eb') ?>;">
+                <div class="message-summary-icon">
+                    <i data-lucide="<?= e($statusIcons[$status] ?? 'message-square') ?>"></i>
+                </div>
+                <div class="message-summary-info">
+                    <span><?= htmlspecialchars($status) ?></span>
+                    <strong><?= (int) ($resumo[$status] ?? 0) ?></strong>
+                </div>
             </div>
         <?php endforeach; ?>
     </div>

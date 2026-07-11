@@ -24,93 +24,65 @@ if (empty($diagnostico) || !is_array($diagnostico)) {
         'APP_URL_publica' => function_exists('is_public_url') && is_public_url($appUrl) ? 'sim' : 'nao',
     ];
 }
+$backupInfo = $backupInfo ?? ['last_at' => '', 'last_file' => '', 'last_size' => 0];
+$auditLogs = is_array($auditLogs ?? null) ? $auditLogs : [];
+$formatBackupSize = static function ($bytes): string {
+    $bytes = (int) $bytes;
+    if ($bytes <= 0) {
+        return 'nao informado';
+    }
+
+    $units = ['B', 'KB', 'MB', 'GB'];
+    $size = (float) $bytes;
+    $unitIndex = 0;
+    while ($size >= 1024 && $unitIndex < count($units) - 1) {
+        $size /= 1024;
+        $unitIndex++;
+    }
+
+    return number_format($size, $unitIndex === 0 ? 0 : 2, ',', '.') . ' ' . $units[$unitIndex];
+};
 $offerIconOptions = [
-    '🚚' => 'Frete',
-    '📦' => 'Pacote',
-    '🏷️' => 'Oferta',
-    '💳' => 'Cartao',
-    '🛡️' => 'Compra segura',
-    '💬' => 'Atendimento',
-    '📱' => 'Celular',
-    '🎧' => 'Audio',
-    '🎁' => 'Presente',
-    '⚡' => 'Rapidez',
-    '⏰' => 'Horario',
-    '📍' => 'Localizacao',
-    '🔧' => 'Assistencia',
-    '✨' => 'Destaque',
-    '⭐' => 'Favorito',
-    '🔥' => 'Oferta quente',
-    '🎉' => 'Celebracao',
-    '💥' => 'Impacto',
-    '✅' => 'Confirmado',
-    '💯' => 'Top',
-    '🛒' => 'Carrinho',
-    '🛍️' => 'Compras',
-    '💰' => 'Economia',
-    '💸' => 'Desconto',
-    '🎟️' => 'Cupom',
-    '🧾' => 'Nota',
-    '📢' => 'Aviso',
-    '📣' => 'Chamada',
-    '🚀' => 'Lancamento',
-    '⏳' => 'Tempo limitado',
-    '⌛' => 'Ultimas horas',
-    '🔔' => 'Notificacao',
-    '📞' => 'Telefone',
-    '☎️' => 'Contato',
-    '🤝' => 'Atendimento humano',
-    '🙋' => 'Ajuda',
-    '👋' => 'Boas-vindas',
-    '🧑‍🔧' => 'Tecnico',
-    '🛠️' => 'Reparo',
-    '⚙️' => 'Configuracao',
-    '🔋' => 'Bateria',
-    '🔌' => 'Carregador',
-    '💻' => 'Notebook',
-    '🖥️' => 'Computador',
-    '⌚' => 'Smartwatch',
-    '🎮' => 'Games',
-    '🕹️' => 'Controle',
-    '📷' => 'Camera',
-    '🔊' => 'Som',
-    '🎵' => 'Musica',
-    '🎬' => 'Video',
-    '📶' => 'Conectividade',
-    '🌐' => 'Online',
-    '🏪' => 'Loja',
-    '🏬' => 'Shopping',
-    '🏠' => 'Casa',
-    '🚗' => 'Entrega',
-    '🛵' => 'Motoboy',
-    '✈️' => 'Envio',
-    '📮' => 'Postagem',
-    '🧭' => 'Direcao',
-    '🗺️' => 'Mapa',
-    '🔒' => 'Seguro',
-    '🔐' => 'Protegido',
-    '💎' => 'Premium',
-    '🏆' => 'Campeao',
-    '🥇' => 'Primeiro lugar',
-    '👍' => 'Aprovado',
-    '👏' => 'Recomendado',
-    '😍' => 'Favorito do cliente',
-    '😎' => 'Estilo',
-    '🤩' => 'Novidade',
-    '🆕' => 'Novo',
-    '🆒' => 'Legal',
-    '🔝' => 'Mais vendido',
-    '📈' => 'Alta procura',
-    '🧲' => 'Imperdivel',
-    '🎯' => 'Escolha certa',
-    '🪄' => 'Especial',
-    '🌟' => 'Destaque especial',
-    '💡' => 'Dica',
-    '📝' => 'Informacao',
-    '📌' => 'Fixado',
-    '❗' => 'Importante',
-    '❄️' => 'Preco frio',
-    '☀️' => 'Oferta do dia',
+    'truck' => 'Frete',
+    'package' => 'Pacote',
+    'tag' => 'Oferta',
+    'credit-card' => 'Cartao',
+    'shield-check' => 'Compra segura',
+    'message-circle' => 'Atendimento',
+    'smartphone' => 'Celular',
+    'headphones' => 'Audio',
+    'gift' => 'Presente',
+    'zap' => 'Rapidez',
+    'clock' => 'Horario',
+    'map-pin' => 'Localizacao',
+    'wrench' => 'Assistencia',
+    'sparkles' => 'Destaque',
+    'star' => 'Favorito',
+    'flame' => 'Oferta quente',
+    'party-popper' => 'Celebracao',
+    'check-circle' => 'Confirmado',
+    'shopping-cart' => 'Carrinho',
+    'badge-percent' => 'Desconto',
+    'megaphone' => 'Aviso',
+    'rocket' => 'Lancamento',
+    'phone' => 'Telefone',
+    'settings' => 'Configuracao',
+    'battery' => 'Bateria',
+    'plug' => 'Carregador',
+    'laptop' => 'Notebook',
+    'monitor' => 'Computador',
+    'camera' => 'Camera',
+    'wifi' => 'Conectividade',
+    'store' => 'Loja',
+    'home' => 'Casa',
+    'lock' => 'Seguro',
+    'gem' => 'Premium',
+    'trophy' => 'Campeao',
+    'thumbs-up' => 'Aprovado',
+    'trending-up' => 'Alta procura',
+    'lightbulb' => 'Dica',
+    'info' => 'Informacao',
+    'pin' => 'Fixado',
 ];
 $offerDefaults = [
     ['text' => 'Frete gratis em ofertas selecionadas', 'icon' => '🚚'],
@@ -333,6 +305,12 @@ $offerDefaults = [
             <a href="javascript:void(0)" onclick="showTab('pagamentos')" id="tab-link-pagamentos" class="config-nav-link">
                 <i data-lucide="credit-card"></i> Pagamentos
             </a>
+            <a href="javascript:void(0)" onclick="showTab('backup')" id="tab-link-backup" class="config-nav-link">
+                <i data-lucide="database-backup"></i> Backup
+            </a>
+            <a href="javascript:void(0)" onclick="showTab('auditoria')" id="tab-link-auditoria" class="config-nav-link">
+                <i data-lucide="history"></i> Auditoria
+            </a>
             <a href="javascript:void(0)" onclick="showTab('diagnostico')" id="tab-link-diagnostico" class="config-nav-link">
                 <i data-lucide="activity"></i> Diagnostico
             </a>
@@ -372,6 +350,19 @@ $offerDefaults = [
                         <div class="form-group">
                             <label class="form-label">E-mail de Contato</label>
                             <input type="email" name="settings[email_negocio]" class="form-control" value="<?= htmlspecialchars($settings['email_negocio'] ?? '') ?>">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-card">
+                    <div class="config-card-title">
+                        <i data-lucide="folder-output"></i> Fechamento de Caixa
+                    </div>
+                    <div class="config-grid-2">
+                        <div class="form-group config-grid-full">
+                            <label class="form-label">Pasta para Salvar Relatórios de Fechamento de Caixa (PDF)</label>
+                            <input type="text" name="settings[fechamento_caixa_pasta]" class="form-control" value="<?= htmlspecialchars($settings['fechamento_caixa_pasta'] ?? dirname(__DIR__, 4) . '/public/uploads/relatorios_financeiro') ?>">
+                            <small style="color: var(--text-muted);">Caminho completo da pasta onde os arquivos PDF do fechamento serão salvos automaticamente. Deixe em branco para usar o padrão do sistema.</small>
                         </div>
                     </div>
                 </div>
@@ -452,7 +443,7 @@ $offerDefaults = [
                                     <label class="form-label">Emoji</label>
                                     <select name="settings[<?= $iconKey ?>]" class="form-control">
                                         <?php foreach ($offerIconOptions as $iconValue => $iconLabel): ?>
-                                            <option value="<?= htmlspecialchars($iconValue) ?>" <?= $selectedIcon === $iconValue ? 'selected' : '' ?>><?= htmlspecialchars($iconValue . '  ' . $iconLabel) ?></option>
+                                            <option value="<?= htmlspecialchars($iconValue) ?>" <?= $selectedIcon === $iconValue ? 'selected' : '' ?>><?= htmlspecialchars($iconLabel . ' (' . $iconValue . ')') ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
@@ -651,6 +642,54 @@ $offerDefaults = [
                     </div>
                 </div>
 
+                <div class="config-card" style="background: rgba(0, 158, 227, 0.03); border-color: rgba(0, 158, 227, 0.15);">
+                    <div class="config-card-title" style="color: #009EE3;">
+                        <i data-lucide="smartphone"></i> Smart Point presencial
+                    </div>
+                    <div class="config-grid-2">
+                        <div class="form-group config-grid-full">
+                            <label class="form-label">Terminal ID da Point</label>
+                            <input type="text" name="settings[mercadopago_point_terminal_id]" class="form-control" value="<?= htmlspecialchars($settings['mercadopago_point_terminal_id'] ?? '') ?>" placeholder="Ex: NEWLAND_N950__N950...">
+                            <small style="color: var(--text-muted);">Use o identificador retornado em Terminals no Mercado Pago Developers.</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Forma padrao</label>
+                            <?php $pointDefaultType = $settings['mercadopago_point_default_payment_type'] ?? 'credit_card'; ?>
+                            <select name="settings[mercadopago_point_default_payment_type]" class="form-control">
+                                <option value="credit_card" <?= $pointDefaultType === 'credit_card' ? 'selected' : '' ?>>Credito</option>
+                                <option value="debit_card" <?= $pointDefaultType === 'debit_card' ? 'selected' : '' ?>>Debito</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Parcelas padrao</label>
+                            <?php $pointDefaultInstallments = max(1, min(12, (int) ($settings['mercadopago_point_default_installments'] ?? 1))); ?>
+                            <select name="settings[mercadopago_point_default_installments]" class="form-control">
+                                <?php for ($i = 1; $i <= 12; $i++): ?>
+                                    <option value="<?= $i ?>" <?= $i === $pointDefaultInstallments ? 'selected' : '' ?>><?= $i ?>x</option>
+                                <?php endfor; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Juros do parcelamento</label>
+                            <?php $pointInstallmentsCost = $settings['mercadopago_point_installments_cost'] ?? 'seller'; ?>
+                            <select name="settings[mercadopago_point_installments_cost]" class="form-control">
+                                <option value="seller" <?= $pointInstallmentsCost === 'seller' ? 'selected' : '' ?>>Loja assume</option>
+                                <option value="buyer" <?= $pointInstallmentsCost === 'buyer' ? 'selected' : '' ?>>Cliente assume</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Impressao na maquininha</label>
+                            <input type="text" name="settings[mercadopago_point_print_on_terminal]" class="form-control" value="no_ticket" readonly>
+                            <small style="color: var(--text-muted);">Valor usado pela API Orders para nao imprimir ticket no terminal.</small>
+                        </div>
+                        <div class="form-group config-grid-full">
+                            <label class="form-label">URL de webhook para Orders</label>
+                            <input type="text" class="form-control" readonly value="<?= htmlspecialchars(absolute_route_url('mercadopago/pointWebhook')) ?>">
+                            <small style="color: var(--text-muted);">No Mercado Pago, ative Webhooks de producao para o topico Order e cole esta URL HTTPS.</small>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="config-card">
                     <div class="config-card-title">
                         <i data-lucide="qr-code"></i> Pagamento Direto
@@ -667,16 +706,114 @@ $offerDefaults = [
                     </div>
                     <div class="config-grid-2">
                         <div class="form-group">
+                            <label class="form-label">Point Debito / QR / Saldo Mercado Pago (%)</label>
+                            <input type="text" name="settings[taxa_point_debito_qr_saldo]" class="form-control" value="<?= htmlspecialchars($settings['taxa_point_debito_qr_saldo'] ?? '1,99') ?>" placeholder="1,99">
+                            <small style="color: var(--text-muted);">Dinheiro na hora.</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Point Credito na hora (%)</label>
+                            <input type="text" name="settings[taxa_point_credito_hora]" class="form-control" value="<?= htmlspecialchars($settings['taxa_point_credito_hora'] ?? '4,74') ?>" placeholder="4,74">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Point Credito 14 dias (%)</label>
+                            <input type="text" name="settings[taxa_point_credito_14d]" class="form-control" value="<?= htmlspecialchars($settings['taxa_point_credito_14d'] ?? '3,79') ?>" placeholder="3,79">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Point Credito 30 dias (%)</label>
+                            <input type="text" name="settings[taxa_point_credito_30d]" class="form-control" value="<?= htmlspecialchars($settings['taxa_point_credito_30d'] ?? '3,03') ?>" placeholder="3,03">
+                        </div>
+                        <div class="form-group">
                             <label class="form-label">Taxa Cartao de Debito (%)</label>
                             <input type="text" name="settings[taxa_cartao_debito]" class="form-control" value="<?= htmlspecialchars($settings['taxa_cartao_debito'] ?? '') ?>" placeholder="Ex: 1,99">
-                            <small style="color: var(--text-muted);">Usada automaticamente no PDV quando a forma for cartao de debito.</small>
+                            <small style="color: var(--text-muted);">Fallback antigo, usado se a taxa Point estiver vazia.</small>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Taxa Cartao de Credito (%)</label>
                             <input type="text" name="settings[taxa_cartao_credito]" class="form-control" value="<?= htmlspecialchars($settings['taxa_cartao_credito'] ?? '') ?>" placeholder="Ex: 3,49">
-                            <small style="color: var(--text-muted);">O valor da taxa entra como despesa no financeiro.</small>
+                            <small style="color: var(--text-muted);">Fallback antigo, usado se a taxa Point estiver vazia.</small>
                         </div>
                     </div>
+                    <div class="config-grid-2" style="margin-top:1rem;">
+                        <?php $parcelamentoDefaults = [2 => '4,59', 3 => '0,57', 12 => '17,28']; ?>
+                        <?php for ($parcelas = 2; $parcelas <= 12; $parcelas++): ?>
+                        <?php $key = 'taxa_point_parcelamento_' . $parcelas . 'x'; ?>
+                        <?php $defaultTaxa = $parcelamentoDefaults[$parcelas] ?? ''; ?>
+                        <div class="form-group">
+                            <label class="form-label">Acrescimo parcelamento <?= $parcelas ?>x (%)</label>
+                            <input type="text" name="settings[<?= e($key) ?>]" class="form-control" value="<?= htmlspecialchars($settings[$key] ?? $defaultTaxa) ?>" placeholder="<?= $defaultTaxa !== '' ? e($defaultTaxa) : 'Informe a taxa' ?>">
+                        </div>
+                        <?php endfor; ?>
+                    </div>
+                </div>
+            </section>
+
+            <section id="sect-backup" class="config-section">
+                <h3 class="brand-font" style="margin-bottom: 0.5rem;">Backup do Sistema</h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 2rem;">Gere uma copia do banco de dados para guardar fora da hospedagem.</p>
+
+                <div class="config-card">
+                    <div class="config-card-title">
+                        <i data-lucide="database-backup"></i> Banco de Dados
+                    </div>
+                    <div class="diagnostic-grid" style="margin-bottom:1.4rem;">
+                        <div class="diagnostic-item">
+                            <span>Ultimo backup</span>
+                            <strong><?= !empty($backupInfo['last_at']) ? date('d/m/Y H:i', strtotime((string) $backupInfo['last_at'])) : 'nenhum registrado' ?></strong>
+                        </div>
+                        <div class="diagnostic-item">
+                            <span>Arquivo</span>
+                            <strong><?= htmlspecialchars((string) ($backupInfo['last_file'] ?: 'nao gerado')) ?></strong>
+                        </div>
+                        <div class="diagnostic-item">
+                            <span>Tamanho</span>
+                            <strong><?= htmlspecialchars($formatBackupSize($backupInfo['last_size'] ?? 0)) ?></strong>
+                        </div>
+                    </div>
+                    <p style="color: var(--text-muted); margin:0 0 1rem; line-height:1.55;">
+                        O arquivo gerado contem tabelas e dados do banco atual. Guarde em local seguro, pois ele pode conter informacoes de clientes, financeiro e configuracoes.
+                    </p>
+                    <button type="button" class="btn btn-primary" onclick="downloadDatabaseBackup()">
+                        <i data-lucide="download"></i> Baixar backup do banco
+                    </button>
+                </div>
+            </section>
+
+            <section id="sect-auditoria" class="config-section">
+                <h3 class="brand-font" style="margin-bottom: 0.5rem;">Auditoria de Acoes</h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 2rem;">Ultimas acoes importantes registradas no sistema.</p>
+
+                <div class="config-card">
+                    <div class="config-card-title">
+                        <i data-lucide="history"></i> Eventos recentes
+                    </div>
+                    <?php if (empty($auditLogs)): ?>
+                        <p style="color: var(--text-muted); margin: 0;">Nenhum evento de auditoria registrado ainda.</p>
+                    <?php else: ?>
+                        <div style="overflow:auto;border:1px solid var(--border);border-radius:12px;background:#fff;">
+                            <table style="width:100%;border-collapse:collapse;min-width:820px;">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align:left;padding:.75rem;border-bottom:1px solid var(--border);font-size:.72rem;text-transform:uppercase;color:var(--text-muted);">Data</th>
+                                        <th style="text-align:left;padding:.75rem;border-bottom:1px solid var(--border);font-size:.72rem;text-transform:uppercase;color:var(--text-muted);">Usuario</th>
+                                        <th style="text-align:left;padding:.75rem;border-bottom:1px solid var(--border);font-size:.72rem;text-transform:uppercase;color:var(--text-muted);">Acao</th>
+                                        <th style="text-align:left;padding:.75rem;border-bottom:1px solid var(--border);font-size:.72rem;text-transform:uppercase;color:var(--text-muted);">Entidade</th>
+                                        <th style="text-align:left;padding:.75rem;border-bottom:1px solid var(--border);font-size:.72rem;text-transform:uppercase;color:var(--text-muted);">Descricao</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($auditLogs as $log): ?>
+                                        <tr>
+                                            <td style="padding:.75rem;border-bottom:1px solid #eef2f7;white-space:nowrap;"><?= !empty($log['created_at']) ? date('d/m/Y H:i', strtotime((string) $log['created_at'])) : '-' ?></td>
+                                            <td style="padding:.75rem;border-bottom:1px solid #eef2f7;"><?= htmlspecialchars((string) ($log['usuario_nome'] ?: 'Sistema')) ?></td>
+                                            <td style="padding:.75rem;border-bottom:1px solid #eef2f7;"><span class="badge badge-gray"><?= htmlspecialchars((string) $log['acao']) ?></span></td>
+                                            <td style="padding:.75rem;border-bottom:1px solid #eef2f7;"><?= htmlspecialchars((string) $log['entidade']) ?><?= !empty($log['entidade_id']) ? ' #' . (int) $log['entidade_id'] : '' ?></td>
+                                            <td style="padding:.75rem;border-bottom:1px solid #eef2f7;"><?= htmlspecialchars((string) ($log['descricao'] ?? '')) ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </section>
 
@@ -740,7 +877,7 @@ function showTab(tab) {
     document.getElementById('tab-link-' + tab).classList.add('active');
     
     // Esconde o botão de salvar se estiver na aba de categorias (que tem forms próprios)
-    document.getElementById('save-bar').style.display = (tab === 'categorias' || tab === 'diagnostico') ? 'none' : 'flex';
+    document.getElementById('save-bar').style.display = (tab === 'categorias' || tab === 'backup' || tab === 'auditoria' || tab === 'diagnostico') ? 'none' : 'flex';
 }
 
 function openAddCat(tipo) {
@@ -792,6 +929,16 @@ function deleteCategoriaConfig(id, message) {
 function disconnectMercadoLivre() {
     const message = 'Desconectar a conta do Mercado Livre?';
     const submit = () => postConfigAction('<?= route_url('mercadolivre/disconnect') ?>');
+    if (typeof abrirConfirmSistema === 'function') {
+        abrirConfirmSistema(message, submit);
+    } else if (window.confirm(message)) {
+        submit();
+    }
+}
+
+function downloadDatabaseBackup() {
+    const message = 'Gerar e baixar um backup do banco de dados agora?';
+    const submit = () => postConfigAction('<?= route_url('config/backup') ?>');
     if (typeof abrirConfirmSistema === 'function') {
         abrirConfirmSistema(message, submit);
     } else if (window.confirm(message)) {

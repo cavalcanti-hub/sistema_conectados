@@ -18,11 +18,11 @@ require_once dirname(__DIR__) . '/layout/header.php'; ?>
         <div style="display:grid;grid-template-columns:300px 1fr;gap:2rem;">
             <div>
                 <label class="form-label">Foto do Produto (Principal)</label>
-                <div id="produto-imagem-preview-box" style="width:100%;height:300px;border:2px dashed var(--border);border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;background:var(--bg-main);position:relative;">
+                <div id="produto-imagem-preview-box" style="width:100%;height:300px;border:2px dashed var(--border);border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;background:#fff;position:relative;">
                     <?php if($isEdit && !empty($item['imagem_url'])): ?>
-                    <img id="produto-imagem-preview" src="<?= htmlspecialchars($item['imagem_url']) ?>" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';document.getElementById('produto-imagem-placeholder').style.display='block';document.getElementById('produto-imagem-help').style.display='block';lucide.createIcons();">
+                    <img id="produto-imagem-preview" src="<?= htmlspecialchars($item['imagem_url']) ?>" style="width:100%;height:100%;object-fit:contain;background:#fff;" onerror="this.style.display='none';document.getElementById('produto-imagem-placeholder').style.display='block';document.getElementById('produto-imagem-help').style.display='block';lucide.createIcons();">
                     <?php else: ?>
-                    <img id="produto-imagem-preview" style="width:100%;height:100%;object-fit:cover;display:none;">
+                    <img id="produto-imagem-preview" style="width:100%;height:100%;object-fit:contain;background:#fff;display:none;">
                     <i id="produto-imagem-placeholder" data-lucide="image" style="color:var(--text-muted); opacity:0.3; width:48px;height:48px;"></i>
                     <p id="produto-imagem-help" style="font-size:.7rem;color:var(--text-muted);margin-top:10px;">Clique acima para escolher</p>
                     <?php endif; ?>
@@ -51,7 +51,7 @@ require_once dirname(__DIR__) . '/layout/header.php'; ?>
                     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.65rem;">
                         <?php foreach ($galleryImages as $galleryImage): ?>
                         <label style="border:1px solid var(--border);border-radius:12px;padding:.45rem;background:white;display:grid;gap:.4rem;cursor:pointer;">
-                            <img src="<?= htmlspecialchars($galleryImage['imagem_url']) ?>" alt="Foto extra do produto" style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;background:#f8fafc;">
+                            <img src="<?= htmlspecialchars($galleryImage['imagem_url']) ?>" alt="Foto extra do produto" style="width:100%;aspect-ratio:1/1;object-fit:contain;border-radius:8px;background:#fff;">
                             <span style="display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:#b91c1c;font-weight:700;">
                                 <input type="checkbox" name="remover_galeria[]" value="<?= (int) $galleryImage['id'] ?>">
                                 Remover
@@ -270,12 +270,12 @@ document.getElementById('produto-galeria-input')?.addEventListener('change', fun
         if (!file.type.startsWith('image/')) return;
 
         const item = document.createElement('div');
-        item.style.cssText = 'aspect-ratio:1/1;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#f8fafc;';
+        item.style.cssText = 'aspect-ratio:1/1;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff;';
 
         const image = document.createElement('img');
         image.src = URL.createObjectURL(file);
         image.alt = file.name;
-        image.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+        image.style.cssText = 'width:100%;height:100%;object-fit:contain;background:#fff;';
         item.appendChild(image);
         preview.appendChild(item);
     });

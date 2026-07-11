@@ -18,14 +18,6 @@ $statusColors = [
 
 <style>
     .purchase-page { display:grid;gap:1.25rem; }
-    .purchase-hero {
-        display:flex;align-items:center;justify-content:space-between;gap:1rem;
-        background:linear-gradient(135deg,#0f2f6f,#0b63ce);color:#fff;border-radius:18px;
-        padding:1.4rem 1.5rem;box-shadow:0 18px 45px -28px rgba(15,47,111,.7);
-    }
-    .purchase-hero h2 { font-family:'Outfit',sans-serif;font-size:1.35rem;margin:0 0 .25rem; }
-    .purchase-hero p { margin:0;color:rgba(255,255,255,.78);font-size:.9rem; }
-    .purchase-hero i { width:46px;height:46px;opacity:.85; }
     .purchase-summary { display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.85rem; }
     .summary-card { background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1rem;box-shadow:var(--shadow-sm); }
     .summary-card span { display:block;color:var(--text-muted);font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em; }
@@ -59,7 +51,6 @@ $statusColors = [
         .purchase-form-submit { grid-column:1 / -1; }
     }
     @media(max-width:760px){
-        .purchase-hero { align-items:flex-start; }
         .purchase-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
         .purchase-filters,.purchase-form-grid { grid-template-columns:1fr; }
         .purchase-form-notes,.purchase-form-submit { grid-column:auto; }
@@ -77,14 +68,6 @@ $statusColors = [
 <?php endif; ?>
 
 <section class="purchase-page">
-    <div class="purchase-hero">
-        <div>
-            <h2>Itens faltando para compra</h2>
-            <p>Registre peças técnicas e produtos que precisam ser solicitados ao fornecedor.</p>
-        </div>
-        <i data-lucide="shopping-basket"></i>
-    </div>
-
     <div class="purchase-summary">
         <?php foreach ($statuses as $status): ?>
             <div class="summary-card">

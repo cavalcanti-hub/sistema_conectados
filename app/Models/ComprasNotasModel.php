@@ -15,10 +15,13 @@ class ComprasNotasModel
     public function getAll(array $filters = []): array
     {
         $sql = "SELECT n.*, f.nome AS fornecedor_nome, u.nome AS usuario_nome,
+                    os.numero_os, c.nome AS os_cliente_nome,
                     COUNT(i.id) AS itens_total
                 FROM compras_notas n
                 LEFT JOIN fornecedores f ON f.id = n.fornecedor_id
                 LEFT JOIN usuarios u ON u.id = n.usuario_id
+                LEFT JOIN ordens_servico os ON os.id = n.os_id
+                LEFT JOIN clientes c ON c.id = os.cliente_id
                 LEFT JOIN compras_nota_itens i ON i.nota_id = n.id
                 WHERE 1=1";
         $params = [];
@@ -44,9 +47,11 @@ class ComprasNotasModel
 
     public function find(int $id): ?array
     {
-        $stmt = $this->db->prepare("SELECT n.*, f.nome AS fornecedor_nome
+        $stmt = $this->db->prepare("SELECT n.*, f.nome AS fornecedor_nome, os.numero_os, c.nome AS os_cliente_nome
             FROM compras_notas n
             LEFT JOIN fornecedores f ON f.id = n.fornecedor_id
+            LEFT JOIN ordens_servico os ON os.id = n.os_id
+            LEFT JOIN clientes c ON c.id = os.cliente_id
             WHERE n.id = :id LIMIT 1");
         $stmt->execute([':id' => $id]);
         $nota = $stmt->fetch();
@@ -87,19 +92,23 @@ class ComprasNotasModel
             $total = array_reduce($normalizedItems, static fn(float $sum, array $item): float => $sum + (float) $item['total'], 0.0);
             $payload = [
                 ':fornecedor_id' => !empty($nota['fornecedor_id']) ? (int) $nota['fornecedor_id'] : null,
+                ':os_id' => !empty($nota['os_id']) ? (int) $nota['os_id'] : null,
                 ':numero' => trim((string) ($nota['numero'] ?? '')) ?: null,
                 ':data_emissao' => trim((string) ($nota['data_emissao'] ?? '')) ?: date('Y-m-d'),
                 ':data_vencimento' => trim((string) ($nota['data_vencimento'] ?? '')) ?: null,
                 ':valor_total' => round($total, 2),
                 ':forma_pagamento' => trim((string) ($nota['forma_pagamento'] ?? '')) ?: null,
                 ':observacoes' => trim((string) ($nota['observacoes'] ?? '')) ?: null,
+                ':anexo_nome' => trim((string) ($nota['anexo_nome'] ?? '')) ?: null,
+                ':anexo_original' => trim((string) ($nota['anexo_original'] ?? '')) ?: null,
+                ':anexo_mime' => trim((string) ($nota['anexo_mime'] ?? '')) ?: null,
                 ':usuario_id' => current_user_id(),
             ];
 
             if ($id === null) {
                 $stmt = $this->db->prepare("INSERT INTO compras_notas
-                    (fornecedor_id, numero, data_emissao, data_vencimento, valor_total, forma_pagamento, observacoes, usuario_id)
-                    VALUES (:fornecedor_id, :numero, :data_emissao, :data_vencimento, :valor_total, :forma_pagamento, :observacoes, :usuario_id)");
+                    (fornecedor_id, os_id, numero, data_emissao, data_vencimento, valor_total, forma_pagamento, observacoes, anexo_nome, anexo_original, anexo_mime, usuario_id)
+                    VALUES (:fornecedor_id, :os_id, :numero, :data_emissao, :data_vencimento, :valor_total, :forma_pagamento, :observacoes, :anexo_nome, :anexo_original, :anexo_mime, :usuario_id)");
                 $stmt->execute($payload);
                 $id = (int) $this->db->lastInsertId();
             } else {
@@ -107,15 +116,24 @@ class ComprasNotasModel
                 if (!$current || $current['status'] !== 'Aberta') {
                     throw new \RuntimeException('Apenas notas abertas podem ser editadas.');
                 }
+                if ($payload[':anexo_nome'] === null) {
+                    $payload[':anexo_nome'] = $current['anexo_nome'] ?? null;
+                    $payload[':anexo_original'] = $current['anexo_original'] ?? null;
+                    $payload[':anexo_mime'] = $current['anexo_mime'] ?? null;
+                }
                 $payload[':id'] = $id;
                 $stmt = $this->db->prepare("UPDATE compras_notas SET
                     fornecedor_id = :fornecedor_id,
+                    os_id = :os_id,
                     numero = :numero,
                     data_emissao = :data_emissao,
                     data_vencimento = :data_vencimento,
                     valor_total = :valor_total,
                     forma_pagamento = :forma_pagamento,
                     observacoes = :observacoes,
+                    anexo_nome = :anexo_nome,
+                    anexo_original = :anexo_original,
+                    anexo_mime = :anexo_mime,
                     usuario_id = :usuario_id
                     WHERE id = :id");
                 $stmt->execute($payload);
@@ -133,7 +151,7 @@ class ComprasNotasModel
         }
     }
 
-    public function baixar(int $id): void
+    public function baixar(int $id, ?int $osId = null): void
     {
         $this->db->beginTransaction();
         try {
@@ -143,6 +161,11 @@ class ComprasNotasModel
             }
             if ($nota['status'] !== 'Aberta') {
                 throw new \RuntimeException('Esta nota ja foi baixada ou cancelada.');
+            }
+            if ($osId !== null && $osId > 0) {
+                $this->db->prepare("UPDATE compras_notas SET os_id = :os_id WHERE id = :id")
+                    ->execute([':os_id' => $osId, ':id' => $id]);
+                $nota['os_id'] = $osId;
             }
 
             foreach ($nota['itens'] as $item) {
@@ -170,7 +193,7 @@ class ComprasNotasModel
                     ':categoria' => 'Compra de Estoque',
                     ':descricao' => 'Nota de compra ' . ($nota['numero'] ?: '#' . $id) . ' - ' . ($nota['fornecedor_nome'] ?: 'Fornecedor nao informado'),
                     ':valor' => (float) $nota['valor_total'],
-                    ':os_id' => null,
+                    ':os_id' => !empty($nota['os_id']) ? (int) $nota['os_id'] : null,
                     ':usuario_id' => current_user_id(),
                     ':data_pagamento' => $nota['data_emissao'] ?: date('Y-m-d'),
                     ':forma_pagamento' => (string) ($nota['forma_pagamento'] ?? ''),

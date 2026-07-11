@@ -30,10 +30,11 @@
             padding-bottom: 2mm;
         }
         .brand img {
-            max-width: 46mm;
-            max-height: 16mm;
+            width: 42mm;
+            height: auto;
+            max-width: 42mm;
+            max-height: none;
             object-fit: contain;
-            filter: grayscale(1) contrast(1.3);
             display: block;
             margin: 0 auto 1mm;
         }
@@ -117,6 +118,55 @@
             content: "-";
             position: absolute;
             left: 0;
+        }
+        /* Checklist badges */
+        .chk-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1mm;
+            margin-top: 1mm;
+        }
+        .chk-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 10px;
+            border-bottom: 1px dotted #ccc;
+            padding-bottom: .8mm;
+        }
+        .chk-row:last-child {
+            border-bottom: none;
+        }
+        .chk-label {
+            flex: 1;
+            padding-right: 2mm;
+        }
+        .chk-badge {
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            padding: .4mm 1.5mm;
+            border-radius: 1px;
+            border: 1px solid;
+            white-space: nowrap;
+        }
+        .chk-ok {
+            border-color: #000;
+            background: #000;
+            color: #fff;
+        }
+        .chk-def {
+            border-color: #000;
+            background: #fff;
+            color: #000;
+        }
+        .obs-box {
+            margin-top: 2mm;
+            border: 1px dashed #000;
+            padding: 1.5mm 2mm;
+            font-size: 10px;
+            white-space: pre-wrap;
+            word-break: break-word;
         }
         .total {
             border-top: 1px solid #000;
@@ -259,10 +309,27 @@
                 <?php endif; ?>
             </section>
 
-            <?php if (!empty($printData['notes'])): ?>
+            <?php if (!empty($printData['checklist']) || !empty($printData['notes'])): ?>
             <section class="section">
                 <div class="section-title">Observacoes</div>
-                <div class="text"><?= htmlspecialchars($printData['notes']) ?></div>
+                <?php if (!empty($printData['checklist'])): ?>
+                    <div style="font-size:9px;font-weight:800;text-transform:uppercase;margin-bottom:1.5mm;">Checklist de Entrada</div>
+                    <div class="chk-grid">
+                        <?php foreach ($printData['checklist'] as $chk): ?>
+                            <?php $isOk = strtolower(trim($chk['state'])) === 'ok'; ?>
+                            <div class="chk-row">
+                                <span class="chk-label"><?= htmlspecialchars($chk['label']) ?></span>
+                                <span class="chk-badge <?= $isOk ? 'chk-ok' : 'chk-def' ?>">
+                                    <?= $isOk ? '✓ OK' : '✗ ' . htmlspecialchars($chk['state']) ?>
+                                </span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+                <?php if (!empty($printData['notes'])): ?>
+                    <?php if (!empty($printData['checklist'])): ?><div style="margin-top:1.5mm;"></div><?php endif; ?>
+                    <div class="obs-box"><?= htmlspecialchars($printData['notes']) ?></div>
+                <?php endif; ?>
             </section>
             <?php endif; ?>
 

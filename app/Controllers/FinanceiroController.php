@@ -3,7 +3,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 
 class FinanceiroController extends Controller {
-    private $model;
+    private \App\Models\FinanceiroModel $model;
     public function __construct() { $this->model = new \App\Models\FinanceiroModel(); }
 
     public function index() {
@@ -65,6 +65,11 @@ class FinanceiroController extends Controller {
     public function store() {
         $id = (int) $this->model->create($this->payload());
         $this->model->syncCardFeeForRevenue($id);
+        $entry = $this->model->find($id);
+        (new \App\Models\AuditModel())->record('criar', 'financeiro', $id, 'Lancamento financeiro criado: ' . ($entry['descricao'] ?? '#' . $id), [
+            'tipo' => $entry['tipo'] ?? '',
+            'valor' => $entry['valor'] ?? '',
+        ]);
         header('Location: ' . route_url('financeiro', ['success' => 1])); exit;
     }
 
@@ -81,8 +86,14 @@ class FinanceiroController extends Controller {
             exit;
         }
 
+        $before = $this->model->find($id);
         $this->model->update($id, $this->payload(false));
         $this->model->syncCardFeeForRevenue($id);
+        $after = $this->model->find($id);
+        (new \App\Models\AuditModel())->record('editar', 'financeiro', $id, 'Lancamento financeiro editado: ' . ($after['descricao'] ?? '#' . $id), [
+            'antes' => $before,
+            'depois' => $after,
+        ]);
         header('Location: ' . route_url('financeiro', ['updated' => 1])); exit;
     }
 
@@ -99,8 +110,13 @@ class FinanceiroController extends Controller {
             exit;
         }
 
+        $entry = $this->model->find($id);
         $this->model->deleteCardFeeForRevenue($id);
         $this->model->delete($id);
+        (new \App\Models\AuditModel())->record('excluir', 'financeiro', $id, 'Lancamento financeiro excluido: ' . ($entry['descricao'] ?? '#' . $id), [
+            'tipo' => $entry['tipo'] ?? '',
+            'valor' => $entry['valor'] ?? '',
+        ]);
         header('Location: ' . route_url('financeiro', ['deleted' => 1])); exit;
     }
 
@@ -129,8 +145,18 @@ class FinanceiroController extends Controller {
 
     private function filters(): array {
         $periodo = $_GET['periodo'] ?? 'dia';
+        if ($periodo === 'custom' && !empty($_GET['data_custom'])) {
+            $periodo = $_GET['data_custom'];
+        }
+
         $periodosPermitidos = ['dia', 'semana', 'mes', 'todos'];
-        $periodo = in_array($periodo, $periodosPermitidos, true) ? $periodo : 'dia';
+        if (in_array($periodo, $periodosPermitidos, true)) {
+            // Valido
+        } elseif (preg_match('/^\d{4}-\d{2}-\d{2}$/', $periodo)) {
+            // Data personalizada valida
+        } else {
+            $periodo = 'dia';
+        }
         $tipo = $_GET['tipo'] ?? '';
         $tipo = in_array($tipo, ['Receita', 'Despesa'], true) ? $tipo : '';
         return [$periodo, $tipo];

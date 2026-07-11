@@ -3,7 +3,7 @@ namespace App\Models;
 use App\Config\Database;
 
 class FinanceiroModel {
-    private $db;
+    private \PDO $db;
     public function __construct() { $this->db = Database::getInstance(); }
 
     private function normalizePaymentMethod(string $method): string {
@@ -20,12 +20,29 @@ class FinanceiroModel {
 
     private function cardFeePercent(string $method, array $settings): float {
         $method = $this->normalizePaymentMethod($method);
-        if (str_contains($method, 'credito') || preg_match('/(^|\s|-)cr($|\s|-)/', $method)) {
-            return normalize_decimal_input($settings['taxa_cartao_credito'] ?? 0);
+        if (str_contains($method, 'debito') || str_contains($method, 'qr') || str_contains($method, 'saldo mercado')) {
+            $point = normalize_decimal_input($settings['taxa_point_debito_qr_saldo'] ?? '');
+            return $point > 0 ? $point : normalize_decimal_input($settings['taxa_cartao_debito'] ?? 0);
         }
 
-        if (str_contains($method, 'debito')) {
-            return normalize_decimal_input($settings['taxa_cartao_debito'] ?? 0);
+        if (str_contains($method, 'credito') || preg_match('/(^|\s|-)cr($|\s|-)/', $method)) {
+            if (str_contains($method, '30')) {
+                $base = normalize_decimal_input($settings['taxa_point_credito_30d'] ?? 0);
+            } elseif (str_contains($method, '14')) {
+                $base = normalize_decimal_input($settings['taxa_point_credito_14d'] ?? 0);
+            } else {
+                $base = normalize_decimal_input($settings['taxa_point_credito_hora'] ?? 0);
+            }
+            if ($base <= 0) {
+                $base = normalize_decimal_input($settings['taxa_cartao_credito'] ?? 0);
+            }
+
+            $installmentFee = 0.0;
+            if (preg_match('/\b([2-9]|1[0-2])x\b/', $method, $matches)) {
+                $installmentFee = normalize_decimal_input($settings['taxa_point_parcelamento_' . (int) $matches[1] . 'x'] ?? 0);
+            }
+
+            return $base + $installmentFee;
         }
 
         return 0.0;
@@ -55,6 +72,9 @@ class FinanceiroModel {
         if ($periodo === 'dia') return " AND $dateExpr = CURDATE()";
         if ($periodo === 'semana') return " AND YEARWEEK($dateExpr, 1) = YEARWEEK(CURDATE(), 1)";
         if ($periodo === 'mes') return " AND MONTH($dateExpr) = MONTH(CURDATE()) AND YEAR($dateExpr) = YEAR(CURDATE())";
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $periodo)) {
+            return " AND $dateExpr = " . $this->db->quote($periodo);
+        }
         return '';
     }
 
@@ -84,7 +104,7 @@ class FinanceiroModel {
         return (int) $stmt->fetchColumn();
     }
 
-    public function create($data) {
+    public function create(array $data) {
         $sql = "INSERT INTO financeiro (tipo, categoria, descricao, valor, os_id, usuario_id, data_pagamento, forma_pagamento) VALUES (:tipo, :categoria, :descricao, :valor, :os_id, :usuario_id, :data_pagamento, :forma_pagamento)";
         $stmt = $this->db->prepare($sql);
         $stmt->execute($data);

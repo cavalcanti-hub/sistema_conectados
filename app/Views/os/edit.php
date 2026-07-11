@@ -53,6 +53,21 @@ $saldoRestante = max(0, $valorTotalOs - $totalPago);
                         </div>
                         <?php endif; ?>
                     </div>
+                    <div class="form-group" style="grid-column:span 2;">
+                        <label class="form-label"><i data-lucide="image-up" style="width:16px;"></i> Fotos de saida do aparelho</label>
+                        <input type="file" name="fotos_saida[]" class="form-control" multiple accept="image/*" style="padding:10px;">
+                        <p style="font-size:.75rem;color:var(--text-muted);margin-top:6px;">Registre o estado do aparelho antes da entrega ao cliente.</p>
+                        <?php if(!empty($os['fotos_saida'])): ?>
+                        <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
+                            <?php foreach(json_decode($os['fotos_saida'], true) as $foto): ?>
+                            <div style="position:relative;">
+                                <?php $foto = basename(str_replace('\\', '/', (string) $foto)); ?>
+                                <img src="<?= e(app_url('uploads/os/' . $foto)) ?>" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
 
@@ -90,7 +105,11 @@ $saldoRestante = max(0, $valorTotalOs - $totalPago);
                 <div class="form-group"><label class="form-label">Prazo de Entrega</label><input type="date" name="prazo_estimado" class="form-control" value="<?= e($os['prazo_estimado'] ?? '') ?>"></div>
                 <div class="form-group"><label class="form-label">Forma de Pagamento</label>
                     <select name="forma_pagamento" class="form-control">
-                        <?php foreach(['Dinheiro','Pix','Cartão de Débito','Cartão de Crédito','Transferência','Saldo Mercado Livre'] as $f): ?><option value="<?= e($f) ?>" <?= ($os['forma_pagamento']??'')===$f?'selected':'' ?>><?= e($f) ?></option><?php endforeach; ?>
+                        <?php foreach(['Dinheiro','Pix','Cartao de Debito','QR Mercado Pago','Saldo Mercado Pago','Cartao de Credito na hora','Cartao de Credito 14 dias','Cartao de Credito 30 dias','Transferencia'] as $f): ?><option value="<?= e($f) ?>" <?= ($os['forma_pagamento']??'')===$f?'selected':'' ?>><?= e($f) ?></option><?php endforeach; ?>
+                        <?php for ($parcelas = 2; $parcelas <= 12; $parcelas++): ?>
+                            <?php $f = 'Cartao de Credito ' . $parcelas . 'x'; ?>
+                            <option value="<?= e($f) ?>" <?= ($os['forma_pagamento']??'')===$f?'selected':'' ?>><?= e($f) ?></option>
+                        <?php endfor; ?>
                     </select>
                 </div>
                 <div class="form-group"><label class="form-label">Situação do Pagamento</label>
@@ -136,7 +155,10 @@ $saldoRestante = max(0, $valorTotalOs - $totalPago);
                         <div class="form-group"><label class="form-label">Adicionar pagamento (R$)</label><input type="number" step="0.01" min="0" name="pagamento_valor" class="form-control" placeholder="0,00"></div>
                         <div class="form-group"><label class="form-label">Forma</label>
                             <select name="pagamento_forma" class="form-control">
-                                <?php foreach(['Dinheiro','Pix','Cartao de Debito','Cartao de Credito','Transferencia','Saldo Mercado Livre'] as $f): ?><option value="<?= e($f) ?>"><?= e($f) ?></option><?php endforeach; ?>
+                                <?php foreach(['Dinheiro','Pix','Cartao de Debito','QR Mercado Pago','Saldo Mercado Pago','Cartao de Credito na hora','Cartao de Credito 14 dias','Cartao de Credito 30 dias','Transferencia'] as $f): ?><option value="<?= e($f) ?>"><?= e($f) ?></option><?php endforeach; ?>
+                                <?php for ($parcelas = 2; $parcelas <= 12; $parcelas++): ?>
+                                    <option value="<?= e('Cartao de Credito ' . $parcelas . 'x') ?>"><?= e('Cartao de Credito ' . $parcelas . 'x') ?></option>
+                                <?php endfor; ?>
                             </select>
                         </div>
                         <div class="form-group"><label class="form-label">Data</label><input type="date" name="pagamento_data" class="form-control" value="<?= date('Y-m-d') ?>"></div>

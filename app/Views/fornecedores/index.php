@@ -5,6 +5,7 @@ $fornecedores = $fornecedores ?? [];
 $fornecedoresAtivos = $fornecedoresAtivos ?? [];
 $notas = $notas ?? [];
 $produtos = $produtos ?? [];
+$ordensServico = $ordensServico ?? [];
 $filters = $filters ?? ['search' => '', 'status' => '', 'fornecedor_id' => 0];
 $formasPagamento = $formasPagamento ?? [];
 $tipos = $tipos ?? ['peca' => 'Peca tecnica', 'produto' => 'Produto da loja'];
@@ -23,47 +24,67 @@ foreach ($notas as $notaResumo) {
 ?>
 
 <style>
-    .supplier-page { display:grid;gap:1.25rem; }
+    .supplier-page { display:grid;gap:1rem; }
     .supplier-hero {
         display:flex;align-items:center;justify-content:space-between;gap:1rem;
-        background:linear-gradient(135deg,#09245c,#0b63ce);color:#fff;border-radius:18px;
-        padding:1.35rem 1.5rem;box-shadow:0 20px 48px -34px rgba(15,47,111,.85);
+        background:#0f3f8f;color:#fff;border-radius:8px;
+        padding:1.1rem 1.25rem;box-shadow:0 14px 32px -28px rgba(15,47,111,.85);
     }
-    .supplier-hero h2 { font-family:'Outfit',sans-serif;font-size:1.35rem;margin:0 0 .25rem; }
+    .supplier-hero h2 { font-family:'Outfit',sans-serif;font-size:1.22rem;margin:0 0 .2rem; }
     .supplier-hero p { margin:0;color:rgba(255,255,255,.78);font-size:.9rem; }
-    .supplier-grid { display:grid;grid-template-columns:minmax(330px,.75fr) minmax(0,1.25fr);gap:1.25rem;align-items:start; }
-    .supplier-panel { background:var(--bg-card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-sm);padding:1.2rem; }
-    .supplier-panel h3 { font-family:'Outfit',sans-serif;font-size:1.05rem;margin:0 0 1rem;color:var(--text-main); }
+    .supplier-grid { display:grid;grid-template-columns:minmax(300px,390px) minmax(0,1fr);gap:1rem;align-items:start; }
+    .supplier-panel { background:var(--bg-card);border:1px solid var(--border) !important;border-left:1px solid var(--border) !important;border-radius:8px;box-shadow:0 12px 28px -24px rgba(15,23,42,.55);padding:1rem; }
+    .supplier-panel h3 { font-family:'Outfit',sans-serif;font-size:1rem;margin:0 0 .9rem;color:var(--text-main);display:flex;align-items:center;gap:.45rem; }
+    .supplier-panel h3 i { width:18px;height:18px;color:var(--primary); }
     .supplier-stats { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.8rem; }
-    .supplier-stat { background:#fff;border:1px solid var(--border);border-radius:14px;padding:.95rem;box-shadow:var(--shadow-sm); }
-    .supplier-stat span { display:block;color:var(--text-muted);font-size:.72rem;text-transform:uppercase;font-weight:800;letter-spacing:.03em; }
-    .supplier-stat strong { display:block;margin-top:.22rem;font-family:'Outfit',sans-serif;font-size:1.25rem;color:var(--primary); }
-    .supplier-form-grid { display:grid;grid-template-columns:1fr 1fr;gap:.8rem; }
+    .supplier-stat { background:#fff;border:1px solid var(--border) !important;border-left:4px solid var(--stat-accent,#2563eb) !important;border-radius:8px;padding:.85rem 1rem;box-shadow:0 12px 28px -25px rgba(15,23,42,.5);display:flex !important;align-items:center !important;justify-content:space-between;gap:.75rem;min-height:72px !important; }
+    .supplier-stat:nth-child(1){--stat-accent:#2563eb;}
+    .supplier-stat:nth-child(2){--stat-accent:#f59e0b;}
+    .supplier-stat:nth-child(3){--stat-accent:#10b981;}
+    .supplier-stat:nth-child(4){--stat-accent:#2d2dff;}
+    .supplier-stat span { display:block;color:var(--text-muted) !important;font-size:.78rem !important;text-transform:none !important;font-weight:700 !important;letter-spacing:0 !important; }
+    .supplier-stat strong { display:block;margin-top:.15rem;font-family:'Outfit',sans-serif;font-size:1.22rem !important;color:var(--primary);line-height:1.1; }
+    .supplier-stat i { width:24px;height:24px;color:var(--stat-accent);opacity:.9; }
+    .supplier-form-grid { display:grid;grid-template-columns:1fr 1fr;gap:.7rem; }
     .span-2 { grid-column:1/-1; }
-    .supplier-list { display:grid;gap:.65rem;max-height:540px;overflow:auto;padding-right:.2rem; }
-    .supplier-card { border:1px solid var(--border);border-radius:13px;padding:.85rem;background:#fff;display:grid;gap:.35rem; }
+    .supplier-form-grid .form-group,.note-form-grid .form-group,.note-item-row .form-group,.notes-toolbar .form-group { margin:0; }
+    .supplier-page .form-label { font-size:.78rem;font-weight:750;color:#1f2937;margin-bottom:.35rem; }
+    .supplier-page .form-control { min-height:40px;border-color:#cbd8ea;border-radius:8px;background:#fff; }
+    .supplier-page textarea.form-control { min-height:72px; }
+    .supplier-actions,.note-actions { display:flex;gap:.65rem;margin-top:.9rem;align-items:center;flex-wrap:wrap; }
+    .supplier-list { display:grid;gap:.55rem;max-height:400px;overflow:auto;padding-right:.2rem; }
+    .supplier-card { border:1px solid var(--border);border-radius:8px;padding:.75rem;background:#fff;display:grid;gap:.3rem;transition:border-color .2s,box-shadow .2s; }
+    .supplier-card:hover { border-color:#b8c7dd;box-shadow:0 12px 24px -24px rgba(15,23,42,.6); }
     .supplier-card-head { display:flex;align-items:flex-start;justify-content:space-between;gap:.7rem; }
     .supplier-card strong { color:var(--text-main);font-size:.96rem; }
     .supplier-card small { color:var(--text-muted);display:block;line-height:1.35; }
-    .notes-toolbar { display:grid;grid-template-columns:minmax(180px,1fr) 170px 220px auto;gap:.75rem;align-items:end;margin-bottom:1rem; }
-    .note-form-grid { display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:.8rem; }
-    .note-items { display:grid;gap:.6rem;margin-top:.85rem; }
-    .note-item-row { display:grid;grid-template-columns:1.15fr 1.1fr .7fr .55fr .75fr 36px;gap:.55rem;align-items:end;padding:.7rem;border:1px solid var(--border);border-radius:12px;background:#f8fafc; }
-    .note-item-row .form-group { margin:0; }
-    .note-table-wrap { overflow:auto;border:1px solid var(--border);border-radius:14px; }
+    .notes-toolbar { display:grid;grid-template-columns:minmax(220px,1fr) 160px minmax(180px,230px) auto;gap:.65rem;align-items:end;margin:0; }
+    .note-form-grid { display:grid;grid-template-columns:1.15fr 1fr .9fr .9fr;gap:.7rem; }
+    .note-form-shell { background:#f8fafc;border:1px solid #dbe5f2;border-radius:8px;padding:.9rem; }
+    .note-items { display:grid;gap:.55rem;margin-top:.8rem; }
+    .note-item-row { display:grid;grid-template-columns:1.1fr 1.1fr .75fr .45fr .65fr 36px;gap:.5rem;align-items:end;padding:.65rem;border:1px solid #d5e0ee;border-radius:8px;background:#fff; }
+    .note-table-wrap { overflow:auto;border:1px solid var(--border);border-radius:8px; }
     .note-table { width:100%;border-collapse:collapse;min-width:980px;background:#fff; }
-    .note-table th { background:#f8fafc;color:#475569;font-size:.74rem;text-align:left;text-transform:uppercase;letter-spacing:.03em;padding:.85rem; }
-    .note-table td { padding:.85rem;border-top:1px solid var(--border);vertical-align:top;font-size:.88rem; }
+    .note-table th { background:#f8fafc;color:#475569;font-size:.72rem;text-align:left;text-transform:uppercase;letter-spacing:.03em;padding:.75rem .85rem;position:sticky;top:0;z-index:1; }
+    .note-table td { padding:.8rem .85rem;border-top:1px solid var(--border);vertical-align:top;font-size:.87rem; }
+    .note-table tbody tr:hover { background:#fbfdff; }
     .note-number { font-weight:850;color:var(--text-main);display:block;margin-bottom:.25rem; }
     .note-items-list { margin:.45rem 0 0;padding-left:1rem;color:var(--text-muted);font-size:.78rem;line-height:1.45; }
     .actions-row { display:flex;gap:.45rem;align-items:center;justify-content:flex-end;flex-wrap:wrap; }
+    .actions-row form { display:flex;gap:.45rem;align-items:center;justify-content:flex-end;flex-wrap:wrap; }
+    .note-os-select { min-width:190px;max-width:240px;min-height:36px !important;font-size:.8rem; }
     .icon-action {
-        width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--primary);
+        width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:#fff;color:var(--primary);
         display:inline-flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none;
     }
     .icon-action.green { color:#059669; }
     .icon-action.red { color:var(--danger); }
     .empty-state { padding:2rem;text-align:center;color:var(--text-muted); }
+    .notes-header { display:flex;justify-content:space-between;gap:1rem;align-items:end;flex-wrap:wrap;margin:1.05rem 0 .75rem; }
+    .notes-header h3 { margin:0; }
+    .notes-header .notes-toolbar { flex:1;min-width:min(100%,640px); }
+    .file-hint { color:var(--text-muted);display:block;margin-top:.35rem;font-size:.78rem; }
+    .active-check { display:inline-flex;align-items:center;gap:.5rem;font-weight:800;color:#1f2937; }
     @media(max-width:1180px){
         .supplier-grid { grid-template-columns:1fr; }
         .supplier-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -97,15 +118,15 @@ foreach ($notas as $notaResumo) {
     </div>
 
     <div class="supplier-stats">
-        <div class="supplier-stat"><span>Fornecedores</span><strong><?= count($fornecedores) ?></strong></div>
-        <div class="supplier-stat"><span>Notas filtradas</span><strong><?= count($notas) ?></strong></div>
-        <div class="supplier-stat"><span>Aberto</span><strong>R$ <?= number_format($totalAberto, 2, ',', '.') ?></strong></div>
-        <div class="supplier-stat"><span>Baixado</span><strong>R$ <?= number_format($totalBaixado, 2, ',', '.') ?></strong></div>
+        <div class="supplier-stat"><div><span>Fornecedores</span><strong><?= count($fornecedores) ?></strong></div><i data-lucide="building-2"></i></div>
+        <div class="supplier-stat"><div><span>Notas filtradas</span><strong><?= count($notas) ?></strong></div><i data-lucide="file-text"></i></div>
+        <div class="supplier-stat"><div><span>Aberto</span><strong>R$ <?= number_format($totalAberto, 2, ',', '.') ?></strong></div><i data-lucide="clock"></i></div>
+        <div class="supplier-stat"><div><span>Baixado</span><strong>R$ <?= number_format($totalBaixado, 2, ',', '.') ?></strong></div><i data-lucide="check-circle"></i></div>
     </div>
 
     <div class="supplier-grid">
         <div class="supplier-panel">
-            <h3>Cadastro de fornecedor</h3>
+            <h3><i data-lucide="contact"></i> Cadastro de fornecedor</h3>
             <form action="<?= e(route_url('fornecedores/store')) ?>" method="POST" id="supplier-form">
                 <?= csrf_field() ?>
                 <input type="hidden" name="id" id="supplier-id" value="">
@@ -134,18 +155,18 @@ foreach ($notas as $notaResumo) {
                         <label class="form-label">Observacoes</label>
                         <textarea name="observacoes" id="supplier-observacoes" class="form-control" rows="2"></textarea>
                     </div>
-                    <label class="span-2" style="display:flex;align-items:center;gap:.5rem;font-weight:700;">
+                    <label class="span-2 active-check">
                         <input type="checkbox" name="ativo" id="supplier-ativo" value="1" checked> Ativo
                     </label>
                 </div>
-                <div style="display:flex;gap:.75rem;margin-top:1rem;">
+                <div class="supplier-actions">
                     <button type="submit" class="btn btn-primary" id="supplier-submit"><i data-lucide="save"></i> Salvar fornecedor</button>
                     <button type="button" class="btn btn-secondary" onclick="resetSupplierForm()">Limpar</button>
                 </div>
             </form>
 
             <hr style="border:0;border-top:1px solid var(--border);margin:1.2rem 0;">
-            <h3>Fornecedores cadastrados</h3>
+            <h3><i data-lucide="list"></i> Fornecedores cadastrados</h3>
             <div class="supplier-list">
                 <?php if (empty($fornecedores)): ?>
                     <div class="empty-state">Nenhum fornecedor cadastrado.</div>
@@ -170,9 +191,10 @@ foreach ($notas as $notaResumo) {
         </div>
 
         <div class="supplier-panel">
-            <h3>Lancar nota de compra</h3>
-            <form action="<?= e(route_url('fornecedores/storeNota')) ?>" method="POST" id="note-form">
+            <h3><i data-lucide="file-plus"></i> Lancar nota de compra</h3>
+            <form action="<?= e(route_url('fornecedores/storeNota')) ?>" method="POST" id="note-form" enctype="multipart/form-data">
                 <?= csrf_field() ?>
+                <div class="note-form-shell">
                 <div class="note-form-grid">
                     <div class="form-group">
                         <label class="form-label">Fornecedor</label>
@@ -186,6 +208,17 @@ foreach ($notas as $notaResumo) {
                     <div class="form-group">
                         <label class="form-label">Numero da nota</label>
                         <input type="text" name="numero" class="form-control" placeholder="NF, pedido ou recibo">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Vincular OS</label>
+                        <select name="os_id" class="form-control">
+                            <option value="">Sem OS</option>
+                            <?php foreach ($ordensServico as $os): ?>
+                                <option value="<?= (int) $os['id'] ?>">
+                                    <?= htmlspecialchars(($os['numero_os'] ?? '#' . $os['id']) . ' - ' . ($os['cliente_nome'] ?? 'Cliente')) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Emissao</label>
@@ -205,21 +238,27 @@ foreach ($notas as $notaResumo) {
                         <label class="form-label">Observacoes</label>
                         <input type="text" name="observacoes" class="form-control" placeholder="Ex: compra Mercado Livre, frete incluso, boleto a vencer...">
                     </div>
+                    <div class="form-group span-2">
+                        <label class="form-label">Anexo da nota</label>
+                        <input type="file" name="anexo_nota" class="form-control" accept=".pdf,image/jpeg,image/png,image/webp,image/gif">
+                        <small class="file-hint">PDF ou imagem ate 20 MB.</small>
+                    </div>
                 </div>
 
                 <div class="note-items" id="note-items"></div>
-                <div style="display:flex;gap:.75rem;margin-top:1rem;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+                <div class="note-actions" style="justify-content:space-between;">
                     <button type="button" class="btn btn-secondary" onclick="addNoteItem()"><i data-lucide="plus"></i> Adicionar item</button>
                     <div style="display:flex;gap:.75rem;align-items:center;">
                         <strong>Total: <span id="note-total">R$ 0,00</span></strong>
                         <button type="submit" class="btn btn-primary"><i data-lucide="file-plus"></i> Lancar nota</button>
                     </div>
                 </div>
+                </div>
             </form>
 
             <hr style="border:0;border-top:1px solid var(--border);margin:1.25rem 0;">
-            <div style="display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
-                <h3 style="margin:0;">Notas de compra</h3>
+            <div class="notes-header">
+                <h3><i data-lucide="receipt"></i> Notas de compra</h3>
                 <form class="notes-toolbar" action="<?= e(route_url()) ?>" method="GET">
                     <input type="hidden" name="url" value="fornecedores">
                     <div class="form-group">
@@ -254,6 +293,7 @@ foreach ($notas as $notaResumo) {
                         <tr>
                             <th>Nota</th>
                             <th>Fornecedor</th>
+                            <th>OS</th>
                             <th>Data</th>
                             <th>Itens</th>
                             <th>Total</th>
@@ -263,15 +303,28 @@ foreach ($notas as $notaResumo) {
                     </thead>
                     <tbody>
                     <?php if (empty($notas)): ?>
-                        <tr><td colspan="7"><div class="empty-state">Nenhuma nota encontrada.</div></td></tr>
+                        <tr><td colspan="8"><div class="empty-state">Nenhuma nota encontrada.</div></td></tr>
                     <?php endif; ?>
                     <?php foreach ($notas as $nota): ?>
                         <tr>
                             <td>
                                 <span class="note-number"><?= htmlspecialchars($nota['numero'] ?: '#' . $nota['id']) ?></span>
                                 <small><?= htmlspecialchars($nota['forma_pagamento'] ?: '-') ?></small>
+                                <?php if (!empty($nota['anexo_nome'])): ?>
+                                    <br><a href="<?= e(route_url('fornecedores/anexoNota', ['id' => (int) $nota['id']])) ?>" target="_blank" style="font-size:.75rem;font-weight:800;color:var(--primary);text-decoration:none;">Ver anexo</a>
+                                <?php endif; ?>
                             </td>
                             <td><?= htmlspecialchars($nota['fornecedor_nome'] ?: 'Nao informado') ?></td>
+                            <td>
+                                <?php if (!empty($nota['os_id'])): ?>
+                                    <a href="<?= e(route_url('os/viewDetail', ['id' => (int) $nota['os_id']])) ?>" style="color:var(--primary);font-weight:800;text-decoration:none;">
+                                        <?= htmlspecialchars($nota['numero_os'] ?: 'OS #' . $nota['os_id']) ?>
+                                    </a>
+                                    <br><small><?= htmlspecialchars($nota['os_cliente_nome'] ?: '') ?></small>
+                                <?php else: ?>
+                                    <small>Sem OS</small>
+                                <?php endif; ?>
+                            </td>
                             <td>
                                 <?= date('d/m/Y', strtotime($nota['data_emissao'])) ?>
                                 <?php if (!empty($nota['data_vencimento'])): ?><br><small>Venc. <?= date('d/m/Y', strtotime($nota['data_vencimento'])) ?></small><?php endif; ?>
@@ -294,6 +347,14 @@ foreach ($notas as $notaResumo) {
                                     <form action="<?= e(route_url('fornecedores/baixarNota')) ?>" method="POST" data-confirm="Baixar esta nota? O estoque dos itens vinculados e o financeiro serao atualizados.">
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="id" value="<?= (int) $nota['id'] ?>">
+                                        <select name="os_id" class="form-control note-os-select" title="Vincular OS antes de baixar">
+                                            <option value="">Sem OS</option>
+                                            <?php foreach ($ordensServico as $os): ?>
+                                                <option value="<?= (int) $os['id'] ?>" <?= (int) ($nota['os_id'] ?? 0) === (int) $os['id'] ? 'selected' : '' ?>>
+                                                    <?= htmlspecialchars(($os['numero_os'] ?? '#' . $os['id']) . ' - ' . ($os['cliente_nome'] ?? 'Cliente')) ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
                                         <button type="submit" class="icon-action green" title="Dar baixa"><i data-lucide="check-circle" style="width:16px;"></i></button>
                                     </form>
                                     <form action="<?= e(route_url('fornecedores/cancelarNota')) ?>" method="POST" data-confirm="Cancelar esta nota de compra?">
@@ -303,6 +364,14 @@ foreach ($notas as $notaResumo) {
                                     </form>
                                     <?php elseif (!empty($nota['baixado_at'])): ?>
                                         <small>Baixada em <?= date('d/m/Y H:i', strtotime($nota['baixado_at'])) ?></small>
+                                        <?php if (!empty($nota['anexo_nome'])): ?>
+                                        <a href="<?= e(route_url('fornecedores/anexoNota', ['id' => (int) $nota['id']])) ?>" target="_blank" class="icon-action" title="Ver anexo da nota">
+                                            <i data-lucide="paperclip" style="width:16px;"></i>
+                                        </a>
+                                        <?php endif; ?>
+                                        <a href="<?= e(route_url('fornecedores/imprimirNota', ['id' => (int) $nota['id']])) ?>" target="_blank" class="icon-action" title="Imprimir nota baixada">
+                                            <i data-lucide="printer" style="width:16px;"></i>
+                                        </a>
                                     <?php endif; ?>
                                 </div>
                             </td>

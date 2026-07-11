@@ -9,6 +9,52 @@ if (!function_exists('app_env')) {
     }
 }
 
+if (!function_exists('config_status')) {
+    /** Retorna somente o estado da configuracao, nunca o seu valor. */
+    function config_status(string $key, ?callable $validator = null): string
+    {
+        $value = app_env($key, null);
+        if ($value === null || trim($value) === '') {
+            return 'Não configurado';
+        }
+        if ($validator !== null && !$validator($value)) {
+            return 'Inválido';
+        }
+        return 'Configurado';
+    }
+}
+
+if (!function_exists('backup_storage_path')) {
+    function backup_storage_path(): ?string
+    {
+        $configured = trim((string) app_env('BACKUP_PATH', ''));
+        return $configured !== '' ? rtrim($configured, "\\/") : null;
+    }
+}
+
+if (!function_exists('issue_os_payment_nonce')) {
+    function issue_os_payment_nonce(int $osId): string
+    {
+        $token = bin2hex(random_bytes(32));
+        $_SESSION['_os_payment_nonces'][$token] = ['os_id' => $osId, 'user_id' => current_user_id(), 'expires' => time() + 900];
+        if (count($_SESSION['_os_payment_nonces']) > 12) $_SESSION['_os_payment_nonces'] = array_slice($_SESSION['_os_payment_nonces'], -12, null, true);
+        return $token;
+    }
+}
+
+if (!function_exists('validate_os_payment_nonce')) {
+    function validate_os_payment_nonce(string $token, int $osId): bool
+    {
+        $entry = $_SESSION['_os_payment_nonces'][$token] ?? null;
+        return is_array($entry) && hash_equals((string) array_search($entry, $_SESSION['_os_payment_nonces'], true), $token)
+            && (int) $entry['os_id'] === $osId && (int) $entry['user_id'] === (int) current_user_id() && (int) $entry['expires'] >= time();
+    }
+}
+
+if (!function_exists('consume_os_payment_nonce')) {
+    function consume_os_payment_nonce(string $token): void { unset($_SESSION['_os_payment_nonces'][$token]); }
+}
+
 if (!function_exists('e')) {
     function e($value): string
     {
@@ -34,7 +80,28 @@ if (!function_exists('current_user_id')) {
 if (!function_exists('current_user_profile')) {
     function current_user_profile(): string
     {
-        return (string) ($_SESSION['perfil'] ?? '');
+        static $profileSynced = false;
+
+        $profile = trim((string) ($_SESSION['perfil'] ?? ''));
+        $userId = current_user_id();
+        if (!$profileSynced && $userId !== null && class_exists(\App\Config\Database::class)) {
+            $profileSynced = true;
+            try {
+                $db = \App\Config\Database::getInstance();
+                $stmt = $db->prepare('SELECT nome, perfil FROM usuarios WHERE id = :id AND status = :status LIMIT 1');
+                $stmt->execute([':id' => $userId, ':status' => 'Ativo']);
+                $user = $stmt->fetch();
+                if ($user && !empty($user['perfil'])) {
+                    $_SESSION['usuario_nome'] = $user['nome'] ?? ($_SESSION['usuario_nome'] ?? '');
+                    $_SESSION['perfil'] = trim((string) $user['perfil']);
+                    $profile = (string) $_SESSION['perfil'];
+                }
+            } catch (Throwable $e) {
+                app_log('Nao foi possivel recarregar perfil da sessao.', ['usuario_id' => $userId]);
+            }
+        }
+
+        return $profile;
     }
 }
 
@@ -87,7 +154,8 @@ if (!function_exists('csrf_field')) {
 if (!function_exists('csrf_verify')) {
     function csrf_verify(): bool
     {
-        $token = (string) ($_POST['_csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? ''));
+        $tokenValue = $_POST['_csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+        $token = is_array($tokenValue) ? (string) end($tokenValue) : (string) $tokenValue;
         $sessionToken = (string) ($_SESSION['_csrf_token'] ?? '');
         if ($token === '') {
             return false;
@@ -391,6 +459,134 @@ if (!function_exists('validate_and_store_image_upload')) {
         $result['name'] = $name;
         $result['mime'] = $mime;
         $result['blob'] = $blob;
+        return $result;
+    }
+}
+
+if (!function_exists('validate_and_store_document_upload')) {
+    function validate_and_store_document_upload(array $file, string $subdir): array
+    {
+        $result = ['ok' => true, 'name' => null, 'original' => null, 'mime' => null, 'error' => null];
+
+        if (empty($file['name']) || (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE)) {
+            return $result;
+        }
+
+        $uploadErrors = [
+            UPLOAD_ERR_INI_SIZE => 'O arquivo excede o limite configurado no servidor.',
+            UPLOAD_ERR_FORM_SIZE => 'O arquivo excede o limite permitido pelo formulario.',
+            UPLOAD_ERR_PARTIAL => 'O envio do arquivo foi interrompido.',
+            UPLOAD_ERR_NO_TMP_DIR => 'A pasta temporaria de uploads nao esta disponivel.',
+            UPLOAD_ERR_CANT_WRITE => 'O servidor nao conseguiu gravar o upload.',
+            UPLOAD_ERR_EXTENSION => 'Uma extensao do PHP bloqueou o upload.',
+        ];
+
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            $result['ok'] = false;
+            $result['error'] = $uploadErrors[(int) $file['error']] ?? 'Nao foi possivel enviar o arquivo.';
+            return $result;
+        }
+
+        if (empty($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+            $result['ok'] = false;
+            $result['error'] = 'Nao foi possivel validar o arquivo enviado.';
+            return $result;
+        }
+
+        $size = (int) ($file['size'] ?? filesize($file['tmp_name']));
+        $maxSize = 20 * 1024 * 1024;
+        if ($size <= 0 || $size > $maxSize) {
+            $result['ok'] = false;
+            $result['error'] = 'O anexo deve ter ate 20 MB.';
+            return $result;
+        }
+
+        $allowedMimes = [
+            'application/pdf' => 'pdf',
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            'image/gif' => 'gif',
+        ];
+
+        $mime = '';
+        if (function_exists('finfo_open')) {
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            if ($finfo) {
+                $mime = (string) finfo_file($finfo, $file['tmp_name']);
+                finfo_close($finfo);
+            }
+        }
+
+        $originalExt = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
+        if ($mime === '' && $originalExt === 'pdf') {
+            $mime = 'application/pdf';
+        }
+
+        if (!isset($allowedMimes[$mime])) {
+            $result['ok'] = false;
+            $result['error'] = 'Anexo invalido. Use PDF, JPG, PNG, WEBP ou GIF.';
+            return $result;
+        }
+
+        if (str_starts_with($mime, 'image/') && !@getimagesize($file['tmp_name'])) {
+            $result['ok'] = false;
+            $result['error'] = 'A imagem anexada nao parece ser valida.';
+            return $result;
+        }
+
+        if ($mime === 'application/pdf') {
+            $handle = @fopen($file['tmp_name'], 'rb');
+            $signature = $handle ? (string) fread($handle, 5) : '';
+            if ($handle) {
+                fclose($handle);
+            }
+            if ($signature !== '%PDF-') {
+                $result['ok'] = false;
+                $result['error'] = 'O PDF anexado nao parece ser valido.';
+                return $result;
+            }
+        }
+
+        $safeSubdir = trim(str_replace('\\', '/', $subdir), '/');
+        $safeSubdir = preg_replace('#[^a-zA-Z0-9_/-]#', '', $safeSubdir) ?? '';
+        $safeSubdir = preg_replace('#/{2,}#', '/', $safeSubdir) ?? '';
+        if ($safeSubdir === '' || str_contains($safeSubdir, '..')) {
+            $result['ok'] = false;
+            $result['error'] = 'Pasta de upload invalida.';
+            return $result;
+        }
+
+        $targetDir = public_path('uploads/' . $safeSubdir);
+        if (!is_dir($targetDir) && !@mkdir($targetDir, 0775, true) && !is_dir($targetDir)) {
+            $result['ok'] = false;
+            $result['error'] = 'Nao foi possivel criar a pasta de uploads.';
+            return $result;
+        }
+
+        if (!is_writable($targetDir)) {
+            $result['ok'] = false;
+            $result['error'] = 'A pasta de uploads nao tem permissao de escrita.';
+            return $result;
+        }
+
+        try {
+            $name = bin2hex(random_bytes(16)) . '.' . $allowedMimes[$mime];
+        } catch (Throwable $e) {
+            $name = sha1(uniqid('', true)) . '.' . $allowedMimes[$mime];
+        }
+
+        $targetPath = $targetDir . DIRECTORY_SEPARATOR . $name;
+        if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+            $result['ok'] = false;
+            $result['error'] = 'O servidor nao conseguiu gravar o anexo.';
+            return $result;
+        }
+
+        @chmod($targetPath, 0644);
+        $result['name'] = $name;
+        $result['original'] = basename((string) $file['name']);
+        $result['mime'] = $mime;
         return $result;
     }
 }

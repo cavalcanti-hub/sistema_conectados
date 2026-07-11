@@ -41,9 +41,107 @@ class PdvController extends Controller
         return 0.0;
     }
 
+    private function taxaPointPercentual(string $formaPagamento, array $settings): float
+    {
+        $forma = function_exists('mb_strtolower') ? mb_strtolower($formaPagamento, 'UTF-8') : strtolower($formaPagamento);
+        if (function_exists('iconv')) {
+            $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $forma);
+            if (is_string($ascii) && $ascii !== '') {
+                $forma = strtolower($ascii);
+            }
+        }
+
+        if (str_contains($forma, 'debito') || str_contains($forma, 'qr') || str_contains($forma, 'saldo mercado')) {
+            $point = normalize_decimal_input($settings['taxa_point_debito_qr_saldo'] ?? '');
+            return $point > 0 ? $point : normalize_decimal_input($settings['taxa_cartao_debito'] ?? 0);
+        }
+
+        if (str_contains($forma, 'credito') || preg_match('/(^|\s|-)cr($|\s|-)/', $forma)) {
+            if (str_contains($forma, '30')) {
+                $base = normalize_decimal_input($settings['taxa_point_credito_30d'] ?? 0);
+            } elseif (str_contains($forma, '14')) {
+                $base = normalize_decimal_input($settings['taxa_point_credito_14d'] ?? 0);
+            } else {
+                $base = normalize_decimal_input($settings['taxa_point_credito_hora'] ?? 0);
+            }
+
+            if ($base <= 0) {
+                $base = normalize_decimal_input($settings['taxa_cartao_credito'] ?? 0);
+            }
+
+            $installmentFee = 0.0;
+            if (preg_match('/\b([2-9]|1[0-2])x\b/', $forma, $matches)) {
+                $installmentFee = normalize_decimal_input($settings['taxa_point_parcelamento_' . (int) $matches[1] . 'x'] ?? 0);
+            }
+
+            return $base + $installmentFee;
+        }
+
+        return 0.0;
+    }
+
+    private function pointTaxSettings(array $settings): array
+    {
+        return [
+            'debitoQrSaldo' => normalize_decimal_input($settings['taxa_point_debito_qr_saldo'] ?? 1.99),
+            'creditoHora' => normalize_decimal_input($settings['taxa_point_credito_hora'] ?? 4.74),
+            'credito14d' => normalize_decimal_input($settings['taxa_point_credito_14d'] ?? 3.79),
+            'credito30d' => normalize_decimal_input($settings['taxa_point_credito_30d'] ?? 3.03),
+            'parcelamento' => array_reduce(range(2, 12), function (array $carry, int $parcelas) use ($settings): array {
+                $carry[$parcelas] = normalize_decimal_input($settings['taxa_point_parcelamento_' . $parcelas . 'x'] ?? 0);
+                return $carry;
+            }, []),
+        ];
+    }
+
+    private function pointOptionsFromForma(string $formaPagamento): array
+    {
+        $forma = function_exists('mb_strtolower') ? mb_strtolower($formaPagamento, 'UTF-8') : strtolower($formaPagamento);
+        if (function_exists('iconv')) {
+            $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $forma);
+            if (is_string($ascii) && $ascii !== '') {
+                $forma = strtolower($ascii);
+            }
+        }
+
+        $paymentType = 'credit_card';
+        if (str_contains($forma, 'debito')) {
+            $paymentType = 'debit_card';
+        } elseif (str_contains($forma, 'qr ') || str_contains($forma, 'saldo ')) {
+            $paymentType = 'qr_code';
+        }
+
+        $installments = 1;
+        if (preg_match('/\b([2-9]|1[0-2])x\b/', $forma, $matches)) {
+            $installments = (int) $matches[1];
+        }
+
+        return ['payment_type' => $paymentType, 'installments' => $installments];
+    }
+
+    private function isPointPayment(string $formaPagamento): bool
+    {
+        $forma = function_exists('mb_strtolower') ? mb_strtolower($formaPagamento, 'UTF-8') : strtolower($formaPagamento);
+        if (function_exists('iconv')) {
+            $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $forma);
+            if (is_string($ascii) && $ascii !== '') {
+                $forma = strtolower($ascii);
+            }
+        }
+
+        return str_contains($forma, 'cartao')
+            || str_contains($forma, 'credito')
+            || str_contains($forma, 'debito')
+            || str_contains($forma, 'qr mercado')
+            || str_contains($forma, 'saldo mercado');
+    }
+
     public function index()
     {
         $settings = (new \App\Models\ConfigModel())->getAll();
+        $caixa = $this->model->sincronizarCaixaAutomatico(current_user_id());
+        $caixaResumo = $this->model->resumoCaixa(!empty($caixa['id']) ? (int) $caixa['id'] : null);
+        $horarioCaixa = $this->model->horarioCaixa();
         $clientes = (new \App\Models\ClienteModel())->getAll();
         $produtos = (new \App\Models\EstoqueModel())->getAll();
         $vendasHoje = $this->model->getVendas(50);
@@ -56,6 +154,12 @@ class PdvController extends Controller
             'totalHoje' => $this->model->totalHoje(),
             'taxaDebito' => normalize_decimal_input($settings['taxa_cartao_debito'] ?? 0),
             'taxaCredito' => normalize_decimal_input($settings['taxa_cartao_credito'] ?? 0),
+            'pointTaxas' => $this->pointTaxSettings($settings),
+            'caixa' => $caixa,
+            'caixaResumo' => $caixaResumo,
+            'horarioCaixa' => $horarioCaixa,
+            'caixaNoHorario' => $this->model->estaNoHorario(),
+            'isAdmin' => current_user_profile() === 'Administrador',
         ]);
     }
 
@@ -76,8 +180,13 @@ class PdvController extends Controller
         }
 
         $settings = (new \App\Models\ConfigModel())->getAll();
+        $caixa = $this->model->sincronizarCaixaAutomatico($usuarioId);
+        if (!$caixa || ($caixa['status'] ?? '') !== 'aberto') {
+            $this->redirect(route_url('pdv', ['erro_msg' => 'Caixa fechado. Apenas administradores podem abrir manualmente fora do horario.']));
+        }
         $formaPagamento = (string) ($_POST['forma_pagamento'] ?? '');
-        $taxaCartaoPercentual = $this->taxaCartaoPercentual($formaPagamento, $settings);
+        $taxaCartaoPercentual = $this->taxaPointPercentual($formaPagamento, $settings);
+        $enviarPoint = (string) ($_POST['enviar_point'] ?? '') === '1' && $this->isPointPayment($formaPagamento);
         $db = \App\Config\Database::getInstance();
         $estoqueModel = new \App\Models\EstoqueModel();
         $db->beginTransaction();
@@ -86,8 +195,9 @@ class PdvController extends Controller
             $vendaId = $this->model->criarVenda([
                 'cliente_id' => $_POST['cliente_id'] ?: null,
                 'os_id' => $_POST['os_id'] ?: null,
+                'caixa_id' => (int) $caixa['id'],
                 'usuario_id' => $usuarioId,
-                'forma_pagamento' => $formaPagamento,
+                'forma_pagamento' => $enviarPoint ? 'Mercado Pago Point - ' . $formaPagamento : $formaPagamento,
                 'desconto' => normalize_decimal_input($_POST['desconto'] ?? 0),
                 'observacoes' => $_POST['observacoes'] ?? ''
             ]);
@@ -106,7 +216,9 @@ class PdvController extends Controller
 
                     $descricao = (string) $produto['nome'];
                     $preco = (float) $produto['preco_venda'];
-                    $estoqueModel->baixarEstoque($produtoId, $qtd, null, $usuarioId, 'Venda PDV');
+                    if (!$enviarPoint) {
+                        $estoqueModel->baixarEstoque($produtoId, $qtd, null, $usuarioId, 'Venda PDV');
+                    }
                 }
 
                 if ($preco <= 0) {
@@ -114,6 +226,28 @@ class PdvController extends Controller
                 }
 
                 $this->model->addItem($vendaId, $produtoId ?: null, $descricao, $qtd, $preco);
+            }
+
+            if ($enviarPoint) {
+                $this->model->prepararVendaPoint($vendaId, $taxaCartaoPercentual);
+                $db->commit();
+
+                $vendaPoint = $this->model->findVenda($vendaId);
+                $pointOptions = $this->pointOptionsFromForma($formaPagamento);
+                $result = (new \App\Models\MercadoPagoPointModel())->createOrderForPdv($vendaPoint, [
+                    'amount' => (float) ($vendaPoint['total'] ?? 0),
+                    'payment_type' => $pointOptions['payment_type'],
+                    'installments' => $pointOptions['installments'],
+                ]);
+
+                (new \App\Models\AuditModel())->record('criar', 'mercado_pago_point', (int) $vendaId, 'Venda PDV enviada para Smart Point', [
+                    'order_id' => $result['order_id'] ?? '',
+                    'external_reference' => $result['external_reference'] ?? '',
+                    'total' => $vendaPoint['total'] ?? 0,
+                    'forma_pagamento' => $formaPagamento,
+                ]);
+
+                $this->redirect(route_url('pdv', ['point_sent' => 1, 'venda_id' => $vendaId]));
             }
 
             $this->model->finalizarVenda($vendaId, $taxaCartaoPercentual);
@@ -145,6 +279,11 @@ class PdvController extends Controller
             }
 
             $db->commit();
+            (new \App\Models\AuditModel())->record('venda', 'pdv_caixa', (int) $caixa['id'], 'Venda PDV finalizada no caixa', [
+                'venda_id' => $vendaId,
+                'total' => $vendaFinal['total'] ?? 0,
+                'forma_pagamento' => $formaPagamento,
+            ]);
         } catch (\Throwable $e) {
             if ($db->inTransaction()) {
                 $db->rollBack();
@@ -155,6 +294,77 @@ class PdvController extends Controller
         }
 
         $this->redirect(route_url('pdv', ['venda_id' => $vendaId, 'success' => 1]));
+    }
+
+    public function pointStatus(): void
+    {
+        session_write_close();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $vendaId = (int) ($_GET['venda_id'] ?? ($_GET['id'] ?? 0));
+        if ($vendaId <= 0) {
+            echo json_encode(['ok' => false, 'status' => 'error']);
+            return;
+        }
+
+        $latest = (new \App\Models\MercadoPagoPointModel())->syncLatestForPdv($vendaId);
+        $status = strtolower((string) ($latest['status'] ?? 'unknown'));
+        $paid = in_array($status, ['paid', 'approved', 'finished', 'processed'], true);
+
+        echo json_encode([
+            'ok' => true,
+            'status' => $status,
+            'paid' => $paid,
+            'order_id' => $latest['mp_order_id'] ?? null,
+            'payment_id' => $latest['payment_id'] ?? null,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    public function abrirCaixa(): void
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(route_url('pdv'));
+        }
+        if (current_user_profile() !== 'Administrador') {
+            http_response_code(403);
+            echo 'Apenas administradores podem abrir o caixa manualmente.';
+            exit;
+        }
+
+        $caixa = $this->model->abrirCaixa(
+            current_user_id(),
+            'manual',
+            normalize_decimal_input($_POST['valor_inicial'] ?? 0),
+            trim((string) ($_POST['observacoes'] ?? 'Abertura manual pelo administrador'))
+        );
+        (new \App\Models\AuditModel())->record('abrir', 'pdv_caixa', (int) ($caixa['id'] ?? 0), 'Caixa aberto manualmente pelo administrador');
+        $this->redirect(route_url('pdv', ['caixa' => 'aberto']));
+    }
+
+    public function fecharCaixa(): void
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(route_url('pdv'));
+        }
+        if (current_user_profile() !== 'Administrador') {
+            http_response_code(403);
+            echo 'Apenas administradores podem fechar o caixa manualmente.';
+            exit;
+        }
+
+        $caixa = $this->model->caixaDoDia();
+        if ($caixa && ($caixa['status'] ?? '') === 'aberto') {
+            $caixa = $this->model->fecharCaixa(
+                (int) $caixa['id'],
+                current_user_id(),
+                'manual',
+                ($_POST['valor_informado'] ?? '') !== '' ? normalize_decimal_input($_POST['valor_informado']) : null,
+                trim((string) ($_POST['observacoes'] ?? 'Fechamento manual pelo administrador'))
+            );
+            (new \App\Models\AuditModel())->record('fechar', 'pdv_caixa', (int) ($caixa['id'] ?? 0), 'Caixa fechado manualmente pelo administrador');
+        }
+
+        $this->redirect(route_url('pdv', ['caixa' => 'fechado']));
     }
 
     public function getprodutos()

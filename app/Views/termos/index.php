@@ -37,14 +37,6 @@ $errorMessages = [
 
 <style>
     .terms-page { display:grid;gap:1.25rem; }
-    .terms-hero {
-        display:flex;align-items:center;justify-content:space-between;gap:1rem;
-        background:#0f172a;color:#fff;border-radius:16px;padding:1.35rem 1.5rem;
-        box-shadow:0 18px 45px -30px rgba(15,23,42,.75);
-    }
-    .terms-hero h2 { font-family:'Outfit',sans-serif;font-size:1.35rem;margin:0 0 .25rem; }
-    .terms-hero p { margin:0;color:rgba(255,255,255,.78);font-size:.9rem; }
-    .terms-hero i { width:44px;height:44px;color:#fbbf24; }
     .terms-panel { background:var(--bg-card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-sm);padding:1.25rem; }
     .terms-panel h3 { font-family:'Outfit',sans-serif;font-size:1.05rem;margin:0 0 1rem;color:var(--text-main); }
     .terms-section-title {
@@ -75,7 +67,6 @@ $errorMessages = [
         .terms-span-4 { grid-column:span 2; }
     }
     @media(max-width:760px){
-        .terms-hero { align-items:flex-start; }
         .terms-form-grid,.terms-filters { grid-template-columns:1fr; }
         .terms-span-2,.terms-span-4 { grid-column:auto; }
         .terms-actions .btn { width:100%;justify-content:center; }
@@ -91,14 +82,6 @@ $errorMessages = [
 <?php endif; ?>
 
 <section class="terms-page">
-    <div class="terms-hero">
-        <div>
-            <h2>Termo de compra e venda de aparelho</h2>
-            <p>Gere o documento para smartphones, tablets e notebooks recebidos pela loja.</p>
-        </div>
-        <i data-lucide="file-signature"></i>
-    </div>
-
     <div class="terms-panel">
         <h3>Novo termo</h3>
         <form method="POST" action="<?= e(route_url('termos/store')) ?>">

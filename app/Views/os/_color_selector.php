@@ -63,9 +63,50 @@ $customColor = $currentColor !== '' && !$isKnownColor ? $currentColor : '';
 </div>
 
 <style>
-    .os-color-row { display:grid;grid-template-columns:1fr;gap:.5rem;align-items:center; }
-    .os-color-row.has-swatch { grid-template-columns:minmax(0,1fr) 46px; }
-    .os-color-swatch { width:46px;height:46px;border:1px solid var(--border);border-radius:8px;background:#f8fafc;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35); }
+    .os-color-row { display:grid;grid-template-columns:1fr;gap:.7rem;align-items:center; }
+    .os-color-row.has-swatch { grid-template-columns:minmax(0,1fr) 48px; }
+    .os-color-select {
+        border-color: #cbd8ea;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.96)),
+            var(--bg-card);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 10px 22px -20px rgba(15,23,42,.65);
+        font-weight: 650;
+    }
+    .os-color-select:focus {
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 4px rgba(37,99,235,.11), inset 0 1px 0 rgba(255,255,255,.9);
+    }
+    .os-color-swatch {
+        position: relative;
+        width: 48px;
+        height: 48px;
+        border: 1px solid rgba(148,163,184,.45);
+        border-radius: 14px;
+        background: #f8fafc;
+        box-shadow:
+            inset 0 0 0 3px rgba(255,255,255,.72),
+            inset 0 -12px 18px rgba(15,23,42,.12),
+            0 12px 26px -18px rgba(15,23,42,.8);
+        overflow: hidden;
+    }
+    .os-color-swatch::before {
+        content: "";
+        position: absolute;
+        inset: 4px 5px auto 5px;
+        height: 42%;
+        border-radius: 999px;
+        background: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.08));
+        pointer-events: none;
+    }
+    .os-color-swatch::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        border: 1px solid rgba(255,255,255,.55);
+        pointer-events: none;
+    }
     .os-color-swatch[hidden] { display:none; }
 </style>
 

@@ -109,7 +109,7 @@ class OsController extends Controller
 
     public function create()
     {
-        $clientes = $this->clienteModel->getAll();
+        $clientes = []; // loaded via AJAX
         $tecnicos = $this->tecnicoModel->getAtivos();
         $this->view('os/create', [
             'title' => 'Nova OS - Conectados',
@@ -132,6 +132,20 @@ class OsController extends Controller
         try {
             $aparelhoModel = new \App\Models\AparelhoModel();
             $aparelhoModel->storeModelo($_POST['marca'] ?? 'Geral', $_POST['modelo'] ?? '');
+            $estadoFisico = trim($_POST['estado_fisico'] ?? '');
+            if (isset($_POST['checklist']) && is_array($_POST['checklist'])) {
+                $chkArr = [];
+                foreach ($_POST['checklist'] as $item => $state) {
+                    if ($state !== 'N/A' && $state !== '') {
+                        $chkArr[] = "- $item: $state";
+                    }
+                }
+                if (!empty($chkArr)) {
+                    $prefix = "Checklist de Entrada:\n" . implode("\n", $chkArr);
+                    $estadoFisico = $prefix . "\n\n" . $estadoFisico;
+                }
+            }
+
             $aparelhoId = $aparelhoModel->create([
                 ':cliente_id' => $_POST['cliente_id'],
                 ':marca' => $_POST['marca'] ?? 'Geral',
@@ -139,7 +153,7 @@ class OsController extends Controller
                 ':imei' => $_POST['imei'] ?? '',
                 ':cor' => $_POST['cor'] ?? '',
                 ':senha_padrao' => $_POST['senha_padrao'] ?? '',
-                ':estado_fisico' => $_POST['estado_fisico'] ?? ''
+                ':estado_fisico' => trim($estadoFisico)
             ]);
 
             $fotosNomes = $this->storeOsPhotos($_FILES['fotos'] ?? []);
@@ -160,6 +174,10 @@ class OsController extends Controller
 
             $this->model->addHistorico($osId, current_user_id(), '', 'Recebido', 'OS aberta no sistema');
             $db->commit();
+            (new \App\Models\AuditModel())->record('criar', 'os', (int) $osId, 'OS criada no sistema', [
+                'cliente_id' => $_POST['cliente_id'] ?? null,
+                'status' => 'Recebido',
+            ]);
         } catch (\Throwable $e) {
             if ($db->inTransaction()) {
                 $db->rollBack();
@@ -218,6 +236,8 @@ class OsController extends Controller
 
             $fotosNomes = !empty($osAtual['fotos']) ? json_decode($osAtual['fotos'], true) : [];
             $fotosNomes = array_merge(is_array($fotosNomes) ? $fotosNomes : [], $this->storeOsPhotos($_FILES['fotos'] ?? []));
+            $fotosSaidaNomes = !empty($osAtual['fotos_saida']) ? json_decode($osAtual['fotos_saida'], true) : [];
+            $fotosSaidaNomes = array_merge(is_array($fotosSaidaNomes) ? $fotosSaidaNomes : [], $this->storeOsPhotos($_FILES['fotos_saida'] ?? []));
 
             $novoStatus = normalize_os_status($_POST['status'] ?? $osAtual['status']);
             if (!in_array($novoStatus, os_status_list(), true)) {
@@ -236,7 +256,8 @@ class OsController extends Controller
                 ':prazo_estimado' => $_POST['prazo_estimado'] ?: null,
                 ':forma_pagamento' => $_POST['forma_pagamento'],
                 ':situacao_pagamento' => $_POST['situacao_pagamento'],
-                ':fotos' => !empty($fotosNomes) ? json_encode($fotosNomes) : null
+                ':fotos' => !empty($fotosNomes) ? json_encode($fotosNomes) : null,
+                ':fotos_saida' => !empty($fotosSaidaNomes) ? json_encode($fotosSaidaNomes) : null
             ];
 
             $totalOs = max(0, $payload[':valor_mao_obra'] + $payload[':valor_pecas'] - $payload[':desconto']);
@@ -254,6 +275,11 @@ class OsController extends Controller
 
             $this->syncFinanceiroFromOs((int) $id, $payload, (string) $osAtual['numero_os'], $totalPago);
             $db->commit();
+            (new \App\Models\AuditModel())->record('editar', 'os', (int) $id, 'OS editada: #' . (string) $osAtual['numero_os'], [
+                'status_anterior' => normalize_os_status($osAtual['status']),
+                'status_novo' => $novoStatus,
+                'valor_total' => $totalOs,
+            ]);
         } catch (\Throwable $e) {
             if ($db->inTransaction()) {
                 $db->rollBack();
@@ -300,11 +326,77 @@ class OsController extends Controller
             $deleted = $this->model->delete($id);
             if ($deleted) {
                 $this->deleteOsPhotos($deleted['fotos'] ?? null);
+                $this->deleteOsPhotos($deleted['fotos_saida'] ?? null);
             }
+            (new \App\Models\AuditModel())->record('excluir', 'os', $id, 'OS excluida: #' . ($deleted['numero_os'] ?? $id), [
+                'cliente' => $deleted['cliente_nome'] ?? '',
+                'status' => $deleted['status'] ?? '',
+            ]);
             $this->redirect(route_url('os', ['deleted' => 1]));
         } catch (\Throwable $e) {
             app_log('Falha ao excluir OS', ['os_id' => $id, 'erro' => $e->getMessage()]);
             $this->redirect(route_url('os/viewDetail', ['id' => $id, 'error' => 'delete_failed']));
+        }
+    }
+
+    public function receberPoint()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(route_url('os'));
+        }
+
+        $id = (int) ($_POST['id'] ?? 0);
+        $os = $this->model->find($id);
+        if (!$os) {
+            $this->redirect(route_url('os'));
+        }
+
+        $totalPago = $this->model->totalPagamentos($id);
+        $saldo = round(max(0, (float) ($os['valor_total'] ?? 0) - $totalPago), 2);
+        $valor = normalize_decimal_input($_POST['valor'] ?? $saldo);
+        if ($valor <= 0) {
+            $this->redirect(route_url('os/viewDetail', ['id' => $id, 'point_error' => 'valor']));
+        }
+
+        try {
+            $result = (new \App\Models\MercadoPagoPointModel())->createOrderForOs($os, [
+                'amount' => $valor,
+                'payment_type' => $_POST['payment_type'] ?? null,
+                'installments' => $_POST['installments'] ?? null,
+            ]);
+            (new \App\Models\AuditModel())->record('criar', 'mercado_pago_point', $id, 'Cobranca enviada para Smart Point: OS #' . (string) $os['numero_os'], [
+                'order_id' => $result['order_id'] ?? '',
+                'external_reference' => $result['external_reference'] ?? '',
+                'valor' => $valor,
+            ]);
+            $this->redirect(route_url('os/viewDetail', ['id' => $id, 'point_sent' => 1]));
+        } catch (\Throwable $e) {
+            app_log('Falha ao enviar cobranca Point', ['os_id' => $id, 'erro' => $e->getMessage()]);
+            $this->redirect(route_url('os/viewDetail', ['id' => $id, 'point_error' => rawurlencode($e->getMessage())]));
+        }
+    }
+
+    public function registrarPagamento()
+    {
+        $id = (int) ($_POST['id'] ?? 0);
+        $nonce = trim((string) ($_POST['payment_nonce'] ?? ''));
+        try {
+            $profile = current_user_profile();
+            if (!in_array($profile, ['Administrador', 'Financeiro', 'Atendente'], true)) throw new \App\Services\PaymentException('FORBIDDEN', 'Usuario sem permissao para registrar pagamento.', 403);
+            if (!validate_os_payment_nonce($nonce, $id)) throw new \App\Services\PaymentException('PAYMENT_DUPLICATE', 'Solicitacao duplicada ou expirada.', 409);
+            $amountCents = \App\Services\ManualOsPaymentService::parseMoneyToCents($_POST['valor'] ?? '');
+            $result = (new \App\Services\ManualOsPaymentService())->register($id, $amountCents, (string) ($_POST['forma_pagamento'] ?? ''), (string) ($_POST['observacao'] ?? ''), (int) current_user_id());
+            consume_os_payment_nonce($nonce);
+            (new \App\Models\AuditModel())->record('registrar_pagamento_os', 'ordem_servico', $id, 'Pagamento manual registrado.', ['pagamento_id' => $result['payment_id'], 'valor' => number_format($result['amount_cents'] / 100, 2, '.', ''), 'forma' => $result['method'], 'origem' => 'manual', 'resultado' => 'sucesso']);
+            if (is_ajax_request()) { header('Content-Type: application/json; charset=utf-8'); echo json_encode(['success' => true, 'message' => 'Pagamento registrado com sucesso.', 'payment_status' => $result['status'], 'remaining_balance' => number_format($result['remaining_cents'] / 100, 2, ',', '.')]); return; }
+            $this->redirect(route_url('os/viewDetail', ['id' => $id, 'pagamento_ok' => 1]));
+        } catch (\App\Services\PaymentException $e) {
+            if (is_ajax_request()) { http_response_code($e->httpStatus); header('Content-Type: application/json; charset=utf-8'); echo json_encode(['success' => false, 'message' => $e->getMessage(), 'code' => $e->domainCode]); return; }
+            $this->redirect(route_url('os/viewDetail', ['id' => max(0, $id), 'payment_error' => $e->domainCode]));
+        } catch (\Throwable $e) {
+            app_log('Falha transacional ao registrar pagamento manual', ['os_id' => $id, 'erro_tipo' => get_class($e)]);
+            if (is_ajax_request()) { http_response_code(500); header('Content-Type: application/json; charset=utf-8'); echo json_encode(['success' => false, 'message' => 'Nao foi possivel registrar o pagamento.', 'code' => 'PAYMENT_TRANSACTION_FAILED']); return; }
+            $this->redirect(route_url('os/viewDetail', ['id' => max(0, $id), 'payment_error' => 'PAYMENT_TRANSACTION_FAILED']));
         }
     }
 
@@ -484,6 +576,9 @@ class OsController extends Controller
             'historico' => $historico,
             'pagamentos' => $pagamentos,
             'totalPago' => $totalPago,
+            'paymentNonce' => issue_os_payment_nonce((int) $id),
+            'pointOrder' => (new \App\Models\MercadoPagoPointModel())->latestForOs((int) $id),
+            'pointSettings' => $this->configModel->getAll(),
             'tecnicos' => $tecnicos,
             'status_list' => os_status_list()
         ]);
@@ -533,10 +628,30 @@ class OsController extends Controller
             'remaining_total' => $saldoRestante,
             'payments' => $pagamentos,
             'payment_method' => (string) ($os['forma_pagamento'] ?? ''),
-            'notes' => trim(implode("\n", array_filter([
-                $os['diagnostico_tecnico'] ?? '',
-                $os['estado_fisico'] ?? '',
-            ]))),
+            'notes' => (function() use ($os) {
+                $estadoFisico = trim((string) ($os['estado_fisico'] ?? ''));
+                // Remove the checklist block from free-text notes
+                $clean = preg_replace('/Checklist de Entrada:[\s\S]*?(?=\n\n|$)/u', '', $estadoFisico);
+                return trim(implode("\n", array_filter([
+                    $os['diagnostico_tecnico'] ?? '',
+                    trim($clean),
+                ])));
+            })(),
+            'checklist' => (function() use ($os) {
+                $estadoFisico = trim((string) ($os['estado_fisico'] ?? ''));
+                if (!str_contains($estadoFisico, 'Checklist de Entrada:')) return [];
+                $items = [];
+                if (preg_match('/Checklist de Entrada:\n(.+?)(?=\n\n|$)/su', $estadoFisico, $m)) {
+                    foreach (explode("\n", trim($m[1])) as $line) {
+                        $line = ltrim($line, '- ');
+                        if (str_contains($line, ':')) {
+                            [$label, $state] = array_map('trim', explode(':', $line, 2));
+                            $items[] = ['label' => $label, 'state' => $state];
+                        }
+                    }
+                }
+                return $items;
+            })(),
             'final_message' => 'Obrigado pela preferencia',
         ];
 
@@ -548,5 +663,28 @@ class OsController extends Controller
             'os' => $os,
             'printData' => $summary,
         ]);
+    }
+
+    public function pointStatus()
+    {
+        session_write_close();
+        header('Content-Type: application/json; charset=utf-8');
+        $id = (int) ($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            echo json_encode(['ok' => false, 'status' => 'error']);
+            return;
+        }
+
+        $latest = (new \App\Models\MercadoPagoPointModel())->syncLatestForOs($id);
+        $status = strtolower((string) ($latest['status'] ?? 'unknown'));
+        $paid = in_array($status, ['paid', 'approved', 'finished', 'processed'], true);
+
+        echo json_encode([
+            'ok' => true,
+            'status' => $status,
+            'paid' => $paid,
+            'order_id' => $latest['mp_order_id'] ?? null,
+            'payment_id' => $latest['payment_id'] ?? null,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 }

@@ -50,10 +50,11 @@ $qtyLabel = static function ($value): string {
             padding-bottom: 2mm;
         }
         .brand img {
-            max-width: 46mm;
-            max-height: 16mm;
+            width: 42mm;
+            height: auto;
+            max-width: 42mm;
+            max-height: none;
             object-fit: contain;
-            filter: grayscale(1) contrast(1.3);
             display: block;
             margin: 0 auto 1mm;
         }

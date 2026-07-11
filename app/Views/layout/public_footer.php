@@ -127,6 +127,16 @@ $footerWhats = $footerWhats !== '' ? $footerWhats : '5511999999999';
     <i data-lucide="download" style="width:18px;height:18px;"></i>
     Instalar app
 </button>
+<style>
+    body.has-pwa-install-button .hero-banner-actions {
+        margin-bottom: 4.1rem;
+    }
+    @media (min-width: 721px) {
+        body.has-pwa-install-button .hero-banner-actions {
+            margin-bottom: .5rem;
+        }
+    }
+</style>
 
 <script>
     let pwaInstallPrompt = null;
@@ -135,9 +145,10 @@ $footerWhats = $footerWhats !== '' ? $footerWhats : '5511999999999';
     const isMobilePwaCandidate = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
     const isIosPwa = /iPhone|iPad|iPod/i.test(navigator.userAgent || '') && !window.MSStream;
 
-    function showPwaInstallButton() {
-        if (pwaInstallButton && !isStandalonePwa && isMobilePwaCandidate) {
+    function showPwaInstallButton(force = false) {
+        if (pwaInstallButton && !isStandalonePwa && (force || isMobilePwaCandidate)) {
             pwaInstallButton.style.display = 'inline-flex';
+            document.body.classList.add('has-pwa-install-button');
             lucide.createIcons();
         }
     }
@@ -145,13 +156,14 @@ $footerWhats = $footerWhats !== '' ? $footerWhats : '5511999999999';
     window.addEventListener('beforeinstallprompt', (event) => {
         event.preventDefault();
         pwaInstallPrompt = event;
-        showPwaInstallButton();
+        showPwaInstallButton(true);
     });
 
     window.addEventListener('appinstalled', () => {
         pwaInstallPrompt = null;
         if (pwaInstallButton) {
             pwaInstallButton.style.display = 'none';
+            document.body.classList.remove('has-pwa-install-button');
         }
     });
 
@@ -161,6 +173,7 @@ $footerWhats = $footerWhats !== '' ? $footerWhats : '5511999999999';
             await pwaInstallPrompt.userChoice.catch(() => null);
             pwaInstallPrompt = null;
             pwaInstallButton.style.display = 'none';
+            document.body.classList.remove('has-pwa-install-button');
             return;
         }
 
@@ -175,7 +188,7 @@ $footerWhats = $footerWhats !== '' ? $footerWhats : '5511999999999';
 
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            const swUrl = '<?= app_url('sw.js') ?>?v=20260702-banner';
+            const swUrl = '<?= app_url('sw.js') ?>?v=20260704-pwa-install-fix';
             navigator.serviceWorker.getRegistrations()
                 .then((registrations) => Promise.all(registrations.map((registration) => {
                     const scriptUrl = registration.active?.scriptURL || registration.waiting?.scriptURL || registration.installing?.scriptURL || '';

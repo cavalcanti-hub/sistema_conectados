@@ -11,7 +11,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="<?= app_url('favicon.png') ?>">
     <link rel="icon" type="image/png" sizes="16x16" href="<?= app_url('assets/icons/icon-16x16.png') ?>">
     <link rel="apple-touch-icon" href="<?= app_url('assets/icons/icon-180x180.png') ?>">
-    <link rel="manifest" href="<?= app_url('manifest.webmanifest') ?>">
+    <link rel="manifest" href="<?= app_url('manifest.webmanifest') ?>?v=20260704-pwa-install-fix">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <style>
@@ -118,14 +118,13 @@
         <?php endif; ?>
 
         <form action="<?= route_url('login/login') ?>" method="POST">
-            <?= csrf_field() ?>
             <div class="form-group">
                 <label>E-mail Corporativo</label>
                 <input type="email" name="email" required placeholder="admin@conectadosassistencia.com.br" autocomplete="username" autofocus>
             </div>
             <div class="form-group">
                 <label>Senha de Acesso</label>
-                <input type="password" name="senha" required placeholder="••••••••">
+                <input type="password" name="senha" required placeholder="••••••••" autocomplete="current-password">
             </div>
             <button type="submit" class="btn">
                 <i data-lucide="log-in" style="width:20px;"></i> Acessar Sistema
@@ -139,11 +138,11 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                const swUrl = '<?= app_url('sw.js') ?>?v=20260702-banner';
+                const swUrl = '<?= app_url('sw.js') ?>?v=20260703-local-login';
                 navigator.serviceWorker.getRegistrations()
                     .then((registrations) => Promise.all(registrations.map((registration) => {
                         const scriptUrl = registration.active?.scriptURL || registration.waiting?.scriptURL || registration.installing?.scriptURL || '';
-                        return scriptUrl.includes('/public/sw.js') ? registration.unregister() : Promise.resolve();
+                        return scriptUrl.includes('/sw.js') || scriptUrl.includes('/public/sw.js') ? registration.unregister() : Promise.resolve();
                     })))
                     .then(() => navigator.serviceWorker.register(swUrl))
                     .catch((error) => console.warn('Service worker nao registrado:', error));

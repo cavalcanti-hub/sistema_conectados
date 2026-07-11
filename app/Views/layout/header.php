@@ -12,10 +12,10 @@
     <link rel="icon" type="image/png" sizes="32x32" href="<?= app_url('favicon.png') ?>">
     <link rel="icon" type="image/png" sizes="16x16" href="<?= app_url('assets/icons/icon-16x16.png') ?>">
     <link rel="apple-touch-icon" href="<?= app_url('assets/icons/icon-180x180.png') ?>">
-    <link rel="manifest" href="<?= app_url('manifest.webmanifest') ?>?v=20260703-electric-blue">
+    <link rel="manifest" href="<?= app_url('manifest.webmanifest') ?>?v=20260704-pwa-install-fix">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= app_url('assets/css/index.css') ?>?v=20260703-compact-blue">
+    <link rel="stylesheet" href="<?= app_url('assets/css/index.css') ?>?v=20260703-quick-actions-buttons">
     <?php foreach (($extraStyles ?? []) as $styleHref): ?>
     <link rel="stylesheet" href="<?= e($styleHref) ?>">
     <?php endforeach; ?>
@@ -61,7 +61,6 @@ $dockMenuItems = [
     ['route' => 'produtos', 'module' => 'produtos', 'icon' => 'package', 'label' => 'Produtos'],
     ['route' => 'fornecedores', 'module' => 'fornecedores', 'icon' => 'truck', 'label' => 'Fornec.'],
     ['route' => 'compras', 'module' => 'compras', 'icon' => 'shopping-cart', 'label' => 'Compras'],
-    ['route' => 'checklist', 'module' => 'checklist', 'icon' => 'clipboard-list', 'label' => 'Checklists'],
     ['route' => 'termos', 'module' => 'termos', 'icon' => 'clipboard-check', 'label' => 'Termos'],
     ['route' => 'vitrine', 'module' => 'vitrine', 'icon' => 'monitor', 'label' => 'Vitrine'],
     ['route' => 'financeiro', 'module' => 'financeiro', 'icon' => 'wallet', 'label' => 'Financeiro'],
@@ -70,9 +69,10 @@ $dockMenuItems = [
     ['route' => 'usuarios', 'module' => 'usuarios', 'icon' => 'id-card', 'label' => 'Usuarios'],
     ['route' => 'config', 'module' => 'config', 'icon' => 'settings', 'label' => 'Config.'],
 ];
-$systemUserName = trim((string) ($_SESSION['usuario_nome'] ?? 'Admin')) ?: 'Admin';
-$systemUserRole = trim((string) ($_SESSION['perfil'] ?? 'Administrador')) ?: 'Administrador';
-$systemUserInitial = strtoupper(substr($systemUserName, 0, 1) ?: 'A');
+$systemUserName = trim((string) ($_SESSION['usuario_nome'] ?? 'Usuario')) ?: 'Usuario';
+$systemUserRole = trim((string) current_user_profile());
+$systemUserRole = $systemUserRole !== '' ? $systemUserRole : 'Perfil nao identificado';
+$systemUserInitial = strtoupper(substr($systemUserName, 0, 1) ?: 'U');
 ?>
 <div class="app-container">
     <header class="system-topnav">
@@ -111,7 +111,10 @@ $systemUserInitial = strtoupper(substr($systemUserName, 0, 1) ?: 'A');
                     <strong><?= e($systemUserName) ?></strong>
                     <small><?= e($systemUserRole) ?></small>
                 </div>
-                <a href="<?= e(route_url('logout')) ?>"><i data-lucide="log-out"></i> Sair</a>
+                <form method="POST" action="<?= e(route_url('logout')) ?>" class="logout-form">
+                    <?= csrf_field() ?>
+                    <button type="submit" style="border:0;background:none;color:inherit;font:inherit;padding:0;cursor:pointer;display:flex;align-items:center;gap:.5rem;"><i data-lucide="log-out"></i> Sair</button>
+                </form>
             </div>
         </details>
     </header>
@@ -130,19 +133,19 @@ $systemUserInitial = strtoupper(substr($systemUserName, 0, 1) ?: 'A');
                 $menuItems = [
                     'dashboard'  => ['icon'=>'layout-dashboard','label'=>'Dashboard'],
                     'recados'    => ['icon'=>'message-square-text','label'=>'Recados'],
-                    'os'         => ['icon'=>'file-text','label'=>'Ordens de Serviço'],
+                    'os'         => ['icon'=>'file-text','label'=>'Ordens de Servico'],
                     'clientes'   => ['icon'=>'users','label'=>'Clientes'],
                     'produtos'   => ['icon'=>'shopping-bag', 'label'=>'Produtos (Loja)'],
                     'fornecedores' => ['icon'=>'truck','label'=>'Fornecedores'],
-                    'compras'    => ['icon'=>'clipboard-list', 'label'=>'Solicitações de Compra'],
+                    'compras'    => ['icon'=>'clipboard-list', 'label'=>'Solicitacoes de Compra'],
                     'termos'     => ['icon'=>'file-signature', 'label'=>'Termos Compra/Venda'],
                     'vitrine'    => ['icon'=>'monitor','label'=>'Vitrine Virtual'],
                     'financeiro' => ['icon'=>'dollar-sign','label'=>'Financeiro'],
                     'gastos_pessoais' => ['icon'=>'wallet','label'=>'Gastos Pessoais'],
                     'usuarios'   => ['icon'=>'user-cog','label'=>'Usuarios'],
-                    'pdv'        => ['icon'=>'shopping-cart','label'=>'PDV / Balcão'],
-                    'relatorios' => ['icon'=>'bar-chart-3','label'=>'Relatórios'],
-                    'config'     => ['icon'=>'settings','label'=>'Configurações'],
+                    'pdv'        => ['icon'=>'shopping-cart','label'=>'PDV / Balcao'],
+                    'relatorios' => ['icon'=>'bar-chart-3','label'=>'Relatorios'],
+                    'config'     => ['icon'=>'settings','label'=>'Configuracoes'],
                 ];
                 foreach ($menuItems as $url => $menuItem): ?>
                 <li class="menu-item">
@@ -156,9 +159,10 @@ $systemUserInitial = strtoupper(substr($systemUserName, 0, 1) ?: 'A');
         </nav>
 
         <?php
-        $sidebarUserName = trim((string) ($_SESSION['usuario_nome'] ?? 'Admin')) ?: 'Admin';
-        $sidebarUserRole = trim((string) ($_SESSION['perfil'] ?? 'Administrador')) ?: 'Administrador';
-        $sidebarInitial = strtoupper(substr($sidebarUserName, 0, 1) ?: 'A');
+        $sidebarUserName = trim((string) ($_SESSION['usuario_nome'] ?? 'Usuario')) ?: 'Usuario';
+        $sidebarUserRole = trim((string) current_user_profile());
+        $sidebarUserRole = $sidebarUserRole !== '' ? $sidebarUserRole : 'Perfil nao identificado';
+        $sidebarInitial = strtoupper(substr($sidebarUserName, 0, 1) ?: 'U');
         ?>
         <div class="sidebar-user">
             <div class="sidebar-user-panel">
@@ -167,7 +171,10 @@ $systemUserInitial = strtoupper(substr($systemUserName, 0, 1) ?: 'A');
                     <p class="sidebar-user-name"><?= e($sidebarUserName) ?></p>
                     <p class="sidebar-user-role"><?= e($sidebarUserRole) ?></p>
                 </div>
-                <a class="sidebar-logout" href="<?= e(route_url('logout')) ?>" title="Sair"><i data-lucide="log-out" style="width:16px;"></i></a>
+                <form method="POST" action="<?= e(route_url('logout')) ?>" class="logout-form" style="margin:0;">
+                    <?= csrf_field() ?>
+                    <button class="sidebar-logout" type="submit" title="Sair" style="border:0;cursor:pointer;"><i data-lucide="log-out" style="width:16px;"></i></button>
+                </form>
             </div>
         </div>
     </aside>
@@ -177,7 +184,11 @@ $systemUserInitial = strtoupper(substr($systemUserName, 0, 1) ?: 'A');
             <div class="app-topbar-title" style="display:flex;align-items:center;gap:12px;">
                 <div>
                     <h1 style="font-size:1.5rem;font-family:'Outfit',sans-serif;"><?= e($page_title ?? '') ?></h1>
-                    <p style="color:var(--text-muted);font-size:.85rem;"><?= date('l, d \d\e F \d\e Y') ?></p>
+                    <?php
+                    $weekdays = ['domingo', 'segunda-feira', 'terca-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sabado'];
+                    $months = [1 => 'janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+                    ?>
+                    <p style="color:var(--text-muted);font-size:.85rem;"><?= e($weekdays[(int) date('w')] . ', ' . date('d') . ' de ' . $months[(int) date('n')] . ' de ' . date('Y')) ?></p>
                 </div>
             </div>
             <div class="app-topbar-actions">
@@ -196,6 +207,5 @@ $systemUserInitial = strtoupper(substr($systemUserName, 0, 1) ?: 'A');
         </header>
         
         <?php if (!empty($_GET['success']) && !in_array($current ?? '', ['compras'], true)): ?>
-        <div class="alert-success system-flash"><i data-lucide="check-circle" style="width:18px;"></i> Operação realizada com sucesso!</div>
+        <div class="alert-success system-flash"><i data-lucide="check-circle" style="width:18px;"></i> Operacao realizada com sucesso!</div>
         <?php endif; ?>
-

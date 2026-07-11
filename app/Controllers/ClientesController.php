@@ -14,6 +14,28 @@ class ClientesController extends Controller {
         $this->view('clientes/index', ['title'=>'Clientes - Conectados','page_title'=>'Cadastro de Clientes','clientes'=>$clientes,'search'=>$search,'pagination'=>$pagination]);
     }
 
+    public function searchJson() {
+        $q = trim((string) ($_GET['q'] ?? ''));
+        if ($q === '') {
+            $clientes = $this->model->getAll('', 30);
+        } else {
+            $clientes = $this->model->getAll($q, 30);
+        }
+        
+        $data = [];
+        foreach ($clientes as $c) {
+            $whats = !empty($c['whatsapp']) ? $c['whatsapp'] : (!empty($c['telefone']) ? $c['telefone'] : '');
+            $text = $c['nome'] . ($whats ? ' - ' . $whats : '');
+            $data[] = [
+                'value' => $c['id'],
+                'text' => $text
+            ];
+        }
+        
+        header('Content-Type: application/json');
+        echo json_encode($data);
+    }
+
     public function create() {
         [$old, $error] = $this->consumeFormState();
         $this->view('clientes/create', ['title'=>'Novo Cliente - Conectados','page_title'=>'Novo Cliente','old'=>$old,'error'=>$error]);

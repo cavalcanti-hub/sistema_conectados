@@ -3,16 +3,23 @@
 <?php
 $statusColors = [
     'Recebido' => 'badge-gray',
-    'Em análise' => 'badge-blue',
-    'Aguardando aprovação' => 'badge-yellow',
+    'Em analise' => 'badge-blue',
+    'Aguardando aprovacao' => 'badge-yellow',
     'Aprovado' => 'badge-purple',
     'Reprovado' => 'badge-red',
     'Em reparo' => 'badge-blue',
-    'Aguardando peça' => 'badge-yellow',
+    'Aguardando peca' => 'badge-yellow',
     'Pronto' => 'badge-green',
     'Entregue' => 'badge-green',
     'Cancelado' => 'badge-red',
 ];
+
+$statusCountAscii = [];
+foreach (($statusCount ?? []) as $statusKey => $statusTotal) {
+    $asciiKey = trim((string) @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', (string) $statusKey));
+    $asciiKey = $asciiKey !== '' ? $asciiKey : (string) $statusKey;
+    $statusCountAscii[$asciiKey] = ($statusCountAscii[$asciiKey] ?? 0) + (int) $statusTotal;
+}
 ?>
 
 <!-- KPIs -->
@@ -23,7 +30,7 @@ $statusColors = [
         </div>
         <div class="stat-info">
             <p>OS Abertas</p>
-            <h3><?= ($statusCount['Recebido']??0) + ($statusCount['Em análise']??0) + ($statusCount['Em reparo']??0) + ($statusCount['Aguardando peça']??0) ?></h3>
+            <h3><?= ($statusCountAscii['Recebido'] ?? 0) + ($statusCountAscii['Em analise'] ?? 0) + ($statusCountAscii['Em reparo'] ?? 0) + ($statusCountAscii['Aguardando peca'] ?? 0) ?></h3>
         </div>
     </div>
     <div class="card stat-card">
@@ -31,8 +38,8 @@ $statusColors = [
             <i data-lucide="clock-alert"></i>
         </div>
         <div class="stat-info">
-            <p>Aguardando Aprovação</p>
-            <h3><?= $statusCount['Aguardando aprovação']??0 ?></h3>
+            <p>Aguardando Aprovacao</p>
+            <h3><?= $statusCountAscii['Aguardando aprovacao'] ?? 0 ?></h3>
         </div>
     </div>
     <div class="card stat-card">
@@ -41,7 +48,7 @@ $statusColors = [
         </div>
         <div class="stat-info">
             <p>Prontas p/ Entrega</p>
-            <h3><?= $statusCount['Pronto']??0 ?></h3>
+            <h3><?= $statusCountAscii['Pronto'] ?? 0 ?></h3>
         </div>
     </div>
     <div class="card stat-card">
@@ -50,7 +57,7 @@ $statusColors = [
         </div>
         <div class="stat-info">
             <p>Em Reparo</p>
-            <h3><?= $statusCount['Em reparo']??0 ?></h3>
+            <h3><?= $statusCountAscii['Em reparo'] ?? 0 ?></h3>
         </div>
     </div>
     <div class="card stat-card">
@@ -58,8 +65,8 @@ $statusColors = [
             <i data-lucide="package-search"></i>
         </div>
         <div class="stat-info">
-            <p>Aguardando Peça</p>
-            <h3><?= $statusCount['Aguardando peça']??0 ?></h3>
+            <p>Aguardando Peca</p>
+            <h3><?= $statusCountAscii['Aguardando peca'] ?? 0 ?></h3>
         </div>
     </div>
     <div class="card stat-card">
@@ -85,18 +92,18 @@ $statusColors = [
             <i data-lucide="bar-chart-2"></i>
         </div>
         <div class="stat-info">
-            <p>Faturamento Mês</p>
+            <p>Faturamento Mes</p>
             <h3>R$ <?= number_format($fat_mes, 2, ',', '.') ?></h3>
         </div>
     </div>
 </div>
 
 <div class="dashboard-layout">
-    <!-- Últimas OS -->
+    <!-- Ultimas OS -->
     <div class="card fade-in">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
-            <h3 class="brand-font">Últimas Ordens de Serviço</h3>
-            <a href="<?= route_url('os') ?>" style="font-size:.8rem;color:var(--secondary);text-decoration:none;font-weight:600;">Ver todas →</a>
+            <h3 class="brand-font">Ultimas Ordens de Servico</h3>
+            <a href="<?= route_url('os') ?>" style="font-size:.8rem;color:var(--secondary);text-decoration:none;font-weight:600;">Ver todas -></a>
         </div>
         <div class="table-container">
             <table>
@@ -135,7 +142,7 @@ $statusColors = [
         <?php if(!empty($estoqueBaixo)): ?>
         <div class="card" style="border-left:4px solid var(--danger);">
             <h4 class="brand-font" style="color:var(--danger);margin-bottom:.65rem;display:flex;align-items:center;gap:8px;">
-                <i data-lucide="alert-triangle" style="width:18px;"></i> Estoque Crítico
+                <i data-lucide="alert-triangle" style="width:18px;"></i> Estoque Critico
             </h4>
             <?php foreach(array_slice($estoqueBaixo, 0, 4) as $item): ?>
             <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:.85rem;">
@@ -143,12 +150,12 @@ $statusColors = [
                 <span style="font-weight:700;color:var(--danger);"><?= $item['quantidade'] ?> un.</span>
             </div>
             <?php endforeach; ?>
-            <a href="<?= route_url('produtos') ?>" style="display:block;text-align:right;font-size:.75rem;color:var(--secondary);text-decoration:none;margin-top:.5rem;">Ver produtos →</a>
+            <a href="<?= route_url('produtos') ?>" style="display:block;text-align:right;font-size:.75rem;color:var(--secondary);text-decoration:none;margin-top:.5rem;">Ver produtos -></a>
         </div>
         <?php endif; ?>
 
         <div class="card quick-actions-card">
-            <h4 class="brand-font">Ações Rápidas</h4>
+            <h4 class="brand-font">Acoes Rapidas</h4>
             <div class="quick-actions-grid">
                 <a href="<?= route_url('os/create') ?>" class="quick-action quick-action-primary">
                     <span class="quick-action-icon"><i data-lucide="plus"></i></span>
@@ -156,7 +163,7 @@ $statusColors = [
                 </a>
                 <a href="<?= route_url('pdv') ?>" class="quick-action">
                     <span class="quick-action-icon"><i data-lucide="shopping-cart"></i></span>
-                    <span>PDV Balcão</span>
+                    <span>PDV Balcao</span>
                 </a>
                 <a href="<?= route_url('clientes/create') ?>" class="quick-action">
                     <span class="quick-action-icon"><i data-lucide="user-plus"></i></span>
@@ -173,11 +180,11 @@ $statusColors = [
             <h4 class="brand-font" style="margin-bottom:.65rem;color:var(--accent);">Resumo Financeiro</h4>
             <div style="display:flex;flex-direction:column;gap:.5rem;">
                 <div style="display:flex;justify-content:space-between;">
-                    <span style="color:#94a3b8;font-size:.85rem;">Receitas (mês)</span>
+                    <span style="color:#94a3b8;font-size:.85rem;">Receitas (mes)</span>
                     <span style="color:#4ade80;font-weight:600;">R$ <?= number_format($receitas_mes, 2, ',', '.') ?></span>
                 </div>
                 <div style="display:flex;justify-content:space-between;padding-bottom:.5rem;border-bottom:1px solid rgba(255,255,255,.1);">
-                    <span style="color:#94a3b8;font-size:.85rem;">Despesas (mês)</span>
+                    <span style="color:#94a3b8;font-size:.85rem;">Despesas (mes)</span>
                     <span style="color:#f87171;font-weight:600;">R$ <?= number_format($despesas_mes, 2, ',', '.') ?></span>
                 </div>
                 <div style="display:flex;justify-content:space-between;">

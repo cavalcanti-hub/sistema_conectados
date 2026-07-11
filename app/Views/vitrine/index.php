@@ -80,73 +80,109 @@ $resolveIcon = function ($category) {
     }
     .hero-banner {
         position: relative;
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
         width: 100vw;
         margin-left: calc(50% - 50vw);
         margin-right: calc(50% - 50vw);
-        height: auto;
-        min-height: 0;
-        border-radius: 0;
+        min-height: clamp(300px, 31vw, 420px);
         overflow: hidden;
-        background: #020509;
-        box-shadow: none;
+        background:
+            linear-gradient(115deg, rgba(8, 20, 48, 0.98) 0%, rgba(13, 44, 113, 0.98) 52%, rgba(45, 45, 255, 0.92) 100%);
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        border-bottom: 1px solid rgba(0, 52, 154, 0.12);
+    }
+    .hero-banner::before,
+    .hero-banner::after {
+        content: "";
+        position: absolute;
+        pointer-events: none;
+    }
+    .hero-banner::before {
+        inset: 0;
+        background:
+            radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.2), transparent 18rem),
+            radial-gradient(circle at 74% 34%, rgba(76, 201, 255, 0.22), transparent 21rem);
     }
     .hero-banner::after {
-        display: none;
+        right: -12vw;
+        top: -38%;
+        width: min(680px, 54vw);
+        height: 170%;
+        border-radius: 999px;
+        background: linear-gradient(135deg, rgba(255,255,255,.18), rgba(255,255,255,0));
+        transform: rotate(-18deg);
+        opacity: 0.7;
     }
-    .hero-banner img {
+    .hero-banner-layout {
         position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(300px, 0.62fr);
+        align-items: center;
+        gap: clamp(1rem, 4vw, 4rem);
         width: 100%;
-        height: clamp(420px, 44vw, 620px);
-        object-fit: contain;
-        display: block;
-        background: #020509;
+        max-width: 1480px;
+        min-height: clamp(300px, 31vw, 420px);
+        margin: 0 auto;
+        padding: clamp(1.5rem, 3.1vw, 3.1rem) clamp(1rem, 2vw, 1.75rem);
     }
     .hero-banner-content {
         position: relative;
-        inset: auto;
         z-index: 1;
         display: flex;
         flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 0.85rem;
-        padding: 1rem clamp(1rem, 3vw, 2rem) 1.1rem;
-        max-width: none;
-        width: 100%;
-        background: linear-gradient(180deg, #061126 0%, #03102a 100%);
-        border-top: 1px solid rgba(82, 169, 255, 0.22);
+        align-items: flex-start;
+        justify-content: flex-start;
+        gap: 0.78rem;
+        max-width: 680px;
         color: #fff;
     }
     .hero-banner-kicker {
-        display: none;
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        padding: 0 .72rem;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.1);
         font-size: 0.82rem;
         font-weight: 800;
-        letter-spacing: 0.18em;
+        letter-spacing: 0;
         text-transform: uppercase;
-        color: #4de2ff;
+        color: #dbeafe;
+    }
+    .hero-banner-logo {
+        width: clamp(178px, 20vw, 300px);
+        height: auto;
+        margin: .2rem 0 .1rem;
+        filter:
+            brightness(1.35)
+            saturate(1.15)
+            drop-shadow(0 0 8px rgba(255, 255, 255, 0.45))
+            drop-shadow(0 16px 30px rgba(0, 0, 0, 0.28));
     }
     .hero-banner h2 {
-        display: none;
+        display: block;
         margin: 0;
         font-family: 'Outfit', sans-serif;
-        font-size: clamp(2rem, 3.1vw, 2.8rem);
-        line-height: 1.02;
+        font-size: clamp(1.8rem, 3vw, 3.05rem);
+        line-height: 1.04;
+        max-width: 640px;
     }
     .hero-banner p {
-        display: none;
+        display: block;
         margin: 0;
-        font-size: 1rem;
-        color: rgba(255,255,255,0.82);
+        max-width: 580px;
+        font-size: clamp(.96rem, 1.15vw, 1.08rem);
+        line-height: 1.6;
+        color: rgba(255,255,255,0.84);
     }
     .hero-banner-actions {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        align-items: stretch;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
         gap: 0.72rem;
-        width: min(100%, 860px);
-        margin-top: 0;
+        width: 100%;
+        margin-top: .5rem;
     }
     .hero-banner-actions .featured-btn,
     .hero-banner-secondary {
@@ -206,6 +242,101 @@ $resolveIcon = function ($category) {
     }
     .hero-share-action {
         grid-column: auto;
+    }
+    .hero-banner-art {
+        position: relative;
+        min-height: 260px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .hero-orbit {
+        position: absolute;
+        width: min(420px, 34vw);
+        aspect-ratio: 1;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,.18);
+        background:
+            radial-gradient(circle, rgba(255,255,255,.11) 0 2px, transparent 3px),
+            linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,0));
+        box-shadow: inset 0 0 80px rgba(125, 211, 252, 0.15);
+        opacity: .92;
+    }
+    .hero-device {
+        position: relative;
+        width: min(230px, 20vw);
+        min-width: 190px;
+        aspect-ratio: 10 / 16;
+        border-radius: 34px;
+        padding: 0.72rem;
+        background: linear-gradient(145deg, #081226, #0f2552 52%, #122f74);
+        border: 1px solid rgba(255,255,255,.22);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,.16),
+            0 34px 70px -34px rgba(0,0,0,.78),
+            0 0 0 10px rgba(255,255,255,.04);
+        transform: rotate(7deg);
+    }
+    .hero-device::before {
+        content: "";
+        position: absolute;
+        top: .62rem;
+        left: 50%;
+        width: 58px;
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(255,255,255,.42);
+        transform: translateX(-50%);
+    }
+    .hero-device-screen {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 2.25rem 1rem 1rem;
+        border-radius: 26px;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,.96), rgba(236,245,255,.96));
+        color: #071b37;
+    }
+    .hero-device-screen span {
+        display: inline-flex;
+        width: max-content;
+        max-width: 100%;
+        min-height: 26px;
+        align-items: center;
+        padding: 0 .62rem;
+        border-radius: 999px;
+        background: #e6f0ff;
+        color: var(--primary);
+        font-size: .72rem;
+        font-weight: 900;
+    }
+    .hero-device-screen strong {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.22rem;
+        line-height: 1.08;
+    }
+    .hero-device-list {
+        display: grid;
+        gap: .54rem;
+    }
+    .hero-device-list div {
+        display: flex;
+        align-items: center;
+        gap: .48rem;
+        min-height: 34px;
+        padding: 0 .66rem;
+        border-radius: 8px;
+        background: #f8fbff;
+        border: 1px solid #dbeafe;
+        color: #1e3a5f;
+        font-size: .78rem;
+        font-weight: 800;
+    }
+    .hero-device-list i {
+        color: var(--primary);
     }
     .benefits-strip {
         display: grid;
@@ -740,30 +871,37 @@ $resolveIcon = function ($category) {
     }
     @media (max-width: 720px) {
         .hero-banner {
-            height: auto;
             min-height: 0;
         }
-        .hero-banner img {
-            height: auto;
-        }
-        .hero-banner::after {
-            display: none;
+        .hero-banner-layout {
+            grid-template-columns: 1fr;
+            min-height: 0;
+            padding-top: 1.35rem;
+            padding-bottom: 1.45rem;
         }
         .hero-banner-content {
             max-width: none;
-            justify-content: center;
-            padding: 0.85rem 1rem 1rem;
+            align-items: center;
+            text-align: center;
             width: 100%;
         }
+        .hero-banner-logo {
+            width: min(230px, 68vw);
+        }
         .hero-banner h2 {
-            max-width: calc(100vw - 3rem);
-            overflow-wrap: break-word;
-            font-size: clamp(1.75rem, 7.2vw, 2rem);
+            width: 100%;
+            max-width: 340px;
+            overflow-wrap: anywhere;
+            text-wrap: balance;
+            font-size: clamp(1.45rem, 6vw, 1.82rem);
         }
         .hero-banner p {
             max-width: calc(100vw - 3rem);
             overflow-wrap: break-word;
             font-size: 0.95rem;
+        }
+        .hero-banner-art {
+            display: none;
         }
         .shop-panel {
             flex-direction: column;
@@ -817,24 +955,40 @@ $resolveIcon = function ($category) {
 
 <main class="shop-home">
     <section class="hero-banner">
-        <img src="<?= app_url('assets/img/banner.jpeg') ?>" alt="Banner Conectados Assistencia Tecnica">
-        <div class="hero-banner-content">
-            <span class="hero-banner-kicker"><?= htmlspecialchars($cfg('vitrine_hero_kicker', 'Tecnologia conectada')) ?></span>
-            <h2><?= htmlspecialchars($cfg('vitrine_hero_titulo', 'Celulares, games e acessorios em destaque')) ?></h2>
-            <p><?= htmlspecialchars($cfg('vitrine_hero_texto', 'Escolha produtos com visual premium e atendimento direto pelo WhatsApp da loja.')) ?></p>
-            <div class="hero-banner-actions">
-                <a class="featured-btn" href="<?= route_url('vitrine/catalogo') ?>">
-                    <i data-lucide="shopping-bag" style="width: 18px; height: 18px;"></i>
-                    Ver catalogo
-                </a>
-                <a class="hero-banner-secondary" href="https://wa.me/<?= htmlspecialchars($whats) ?>" target="_blank">
-                    <i data-lucide="message-circle" style="width: 18px; height: 18px;"></i>
-                    Falar com a loja
-                </a>
-                <button class="hero-banner-secondary hero-share-action" type="button" onclick="shareStoreContent('Catalogo Conectados', 'Veja o catalogo de produtos da Conectados.', '<?= app_url('') ?>')">
-                    <i data-lucide="share-2" style="width: 18px; height: 18px;"></i>
-                    Compartilhar catalogo
-                </button>
+        <div class="hero-banner-layout">
+            <div class="hero-banner-content">
+                <span class="hero-banner-kicker"><?= htmlspecialchars($cfg('vitrine_hero_kicker', 'Tecnologia conectada')) ?></span>
+                <img class="hero-banner-logo" src="<?= app_url('assets/img/logo.png') ?>" alt="<?= htmlspecialchars($empresa) ?>">
+                <h2><?= htmlspecialchars($cfg('vitrine_hero_titulo', 'Celulares, games e acessorios em destaque')) ?></h2>
+                <p><?= htmlspecialchars($cfg('vitrine_hero_texto', 'Escolha produtos com visual premium e atendimento direto pelo WhatsApp da loja.')) ?></p>
+                <div class="hero-banner-actions">
+                    <a class="featured-btn" href="<?= route_url('vitrine/catalogo') ?>">
+                        <i data-lucide="shopping-bag" style="width: 18px; height: 18px;"></i>
+                        Ver catalogo
+                    </a>
+                    <a class="hero-banner-secondary" href="https://wa.me/<?= htmlspecialchars($whats) ?>" target="_blank">
+                        <i data-lucide="message-circle" style="width: 18px; height: 18px;"></i>
+                        Falar com a loja
+                    </a>
+                    <button class="hero-banner-secondary hero-share-action" type="button" onclick="shareStoreContent('Catalogo Conectados', 'Veja o catalogo de produtos da Conectados.', '<?= app_url('') ?>')">
+                        <i data-lucide="share-2" style="width: 18px; height: 18px;"></i>
+                        Compartilhar catalogo
+                    </button>
+                </div>
+            </div>
+            <div class="hero-banner-art" aria-hidden="true">
+                <div class="hero-orbit"></div>
+                <div class="hero-device">
+                    <div class="hero-device-screen">
+                        <span>Loja online</span>
+                        <strong>Produtos e suporte no mesmo lugar</strong>
+                        <div class="hero-device-list">
+                            <div><i data-lucide="smartphone" style="width: 15px; height: 15px;"></i> Assistencia tecnica</div>
+                            <div><i data-lucide="headphones" style="width: 15px; height: 15px;"></i> Acessorios</div>
+                            <div><i data-lucide="message-circle" style="width: 15px; height: 15px;"></i> WhatsApp direto</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>

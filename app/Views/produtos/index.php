@@ -188,11 +188,11 @@ foreach ($items as $product) {
     </div>
     <div class="catalog-metric">
         <div class="metric-icon yellow"><i data-lucide="megaphone"></i></div>
-        <div><span>Publicados na página</span><strong><?= $total ?></strong></div>
+        <div><span>Publicados na pagina</span><strong><?= $total ?></strong></div>
     </div>
     <div class="catalog-metric">
         <div class="metric-icon red"><i data-lucide="triangle-alert"></i></div>
-        <div><span>Atenção na página</span><strong><?= $lowStockCount + $errorCount ?></strong></div>
+        <div><span>Atencao na pagina</span><strong><?= $lowStockCount + $errorCount ?></strong></div>
     </div>
 </div>
 
@@ -217,7 +217,7 @@ foreach ($items as $product) {
                     <th>Categoria</th>
                     <th>Estoque</th>
                     <th>Mercado Livre</th>
-                    <th>Preço</th>
+                    <th>Preco</th>
                     <th style="text-align:right;">Ações</th>
                 </tr>
             </thead>

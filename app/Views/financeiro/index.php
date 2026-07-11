@@ -1,6 +1,25 @@
 <?php require_once dirname(__DIR__) . '/layout/header.php'; ?>
 
 <?php
+/**
+ * @var string $title
+ * @var string $page_title
+ * @var array $movimentacoes
+ * @var array $formas
+ * @var array $categorias_despesas
+ * @var float $receitas
+ * @var float $despesas
+ * @var float $lucro
+ * @var float $receitas_dia
+ * @var float $despesas_dia
+ * @var float $saldo_dia
+ * @var string|null $periodo
+ * @var string|null $tipo
+ * @var array $pagination
+ * @var int $qtdReceitas
+ * @var int $qtdDespesas
+ */
+
 $periodoLabels = [
     'dia' => 'Hoje',
     'semana' => 'Semana',
@@ -8,7 +27,11 @@ $periodoLabels = [
     'todos' => 'Todos',
 ];
 $periodoAtual = $periodo ?? 'dia';
-$periodoLabel = $periodoLabels[$periodoAtual] ?? 'Hoje';
+if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $periodoAtual)) {
+    $periodoLabel = date('d/m/Y', strtotime($periodoAtual));
+} else {
+    $periodoLabel = $periodoLabels[$periodoAtual] ?? 'Hoje';
+}
 $tipoAtual = $tipo ?? '';
 $qtdReceitas = $qtdReceitas ?? count(array_filter($movimentacoes, static fn($m) => ($m['tipo'] ?? '') === 'Receita'));
 $qtdDespesas = $qtdDespesas ?? count(array_filter($movimentacoes, static fn($m) => ($m['tipo'] ?? '') === 'Despesa'));
@@ -346,14 +369,19 @@ $canEditLancamentos = current_user_profile() === 'Administrador';
         </div>
     </div>
     <div class="finance-command-actions">
-        <form action="" method="GET" class="finance-filters">
+        <form action="" method="GET" class="finance-filters" id="finance-filters-form">
             <input type="hidden" name="url" value="financeiro">
-            <select name="periodo" class="form-control" onchange="this.form.submit()">
+            <select name="periodo" id="filter-periodo" class="form-control" onchange="handlePeriodoChange(this)">
                 <option value="dia" <?= $periodoAtual === 'dia' ? 'selected' : '' ?>>Hoje</option>
                 <option value="semana" <?= $periodoAtual === 'semana' ? 'selected' : '' ?>>Semana</option>
                 <option value="mes" <?= $periodoAtual === 'mes' ? 'selected' : '' ?>>Mês</option>
                 <option value="todos" <?= $periodoAtual === 'todos' ? 'selected' : '' ?>>Todos</option>
+                <option value="custom" <?= preg_match('/^\d{4}-\d{2}-\d{2}$/', $periodoAtual) ? 'selected' : '' ?>>Outra Data</option>
             </select>
+            <input type="date" name="data_custom" id="filter-data-custom" class="form-control" 
+                   value="<?= preg_match('/^\d{4}-\d{2}-\d{2}$/', $periodoAtual) ? $periodoAtual : '' ?>"
+                   style="display: <?= preg_match('/^\d{4}-\d{2}-\d{2}$/', $periodoAtual) ? 'inline-block' : 'none' ?>;"
+                   onchange="submitCustomDate(this)">
             <select name="tipo" class="form-control" onchange="this.form.submit()">
                 <option value="" <?= $tipoAtual === '' ? 'selected' : '' ?>>Todos os tipos</option>
                 <option value="Receita" <?= $tipoAtual === 'Receita' ? 'selected' : '' ?>>Receitas</option>
@@ -547,7 +575,10 @@ $canEditLancamentos = current_user_profile() === 'Administrador';
             <div class="form-group"><label class="form-label">Valor (R$) *</label><input type="number" step="0.01" name="valor" id="finance-valor" class="form-control" required placeholder="0,00"></div>
             <div class="form-group"><label class="form-label">Forma de Pagamento</label>
                 <select name="forma_pagamento" id="finance-forma" class="form-control">
-                    <option value="Pix">Pix</option><option value="Dinheiro">Dinheiro</option><option value="Cartão de Débito">Cartão de Débito</option><option value="Cartão de Crédito">Cartão de Crédito</option><option value="Transferência">Transferência</option><option value="Boleto">Boleto</option><option value="Saldo Mercado Livre">Saldo Mercado Livre</option>
+                    <option value="Pix">Pix</option><option value="Dinheiro">Dinheiro</option><option value="Cartao de Debito">Cartao de Debito</option><option value="QR Mercado Pago">QR Mercado Pago</option><option value="Saldo Mercado Pago">Saldo Mercado Pago</option><option value="Cartao de Credito na hora">Cartao de Credito na hora</option><option value="Cartao de Credito 14 dias">Cartao de Credito 14 dias</option><option value="Cartao de Credito 30 dias">Cartao de Credito 30 dias</option><option value="Transferencia">Transferencia</option><option value="Boleto">Boleto</option>
+                    <?php for ($parcelas = 2; $parcelas <= 12; $parcelas++): ?>
+                        <option value="<?= e('Cartao de Credito ' . $parcelas . 'x') ?>"><?= e('Cartao de Credito ' . $parcelas . 'x') ?></option>
+                    <?php endfor; ?>
                 </select>
             </div>
             <div class="form-group"><label class="form-label">Data</label><input type="date" name="data_pagamento" id="finance-data" class="form-control" value="<?= date('Y-m-d') ?>"></div>
@@ -597,6 +628,24 @@ function openFinanceModal(entry) {
 
 function closeFinanceModal() {
     document.getElementById('modal-fin').style.display = 'none';
+}
+
+function handlePeriodoChange(select) {
+    const customDateInput = document.getElementById('filter-data-custom');
+    if (select.value === 'custom') {
+        customDateInput.style.display = 'inline-block';
+        customDateInput.focus();
+    } else {
+        customDateInput.style.display = 'none';
+        customDateInput.value = '';
+        select.form.submit();
+    }
+}
+
+function submitCustomDate(input) {
+    if (input.value) {
+        input.form.submit();
+    }
 }
 </script>
 

@@ -22,13 +22,7 @@
 <script>
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        const swUrl = '<?= app_url('sw.js') ?>?v=20260703-compact-blue';
-        navigator.serviceWorker.getRegistrations()
-            .then((registrations) => Promise.all(registrations.map((registration) => {
-                const scriptUrl = registration.active?.scriptURL || registration.waiting?.scriptURL || registration.installing?.scriptURL || '';
-                return scriptUrl.includes('/public/sw.js') ? registration.unregister() : Promise.resolve();
-            })))
-            .then(() => navigator.serviceWorker.register(swUrl))
+        navigator.serviceWorker.register('<?= app_url('sw.js') ?>?v=20260704-pwa-install-fix')
             .catch((error) => console.warn('Service worker nao registrado:', error));
     });
 }
@@ -165,6 +159,48 @@ document.addEventListener('keydown', (event) => {
 });
 
 try { localStorage.removeItem('theme'); } catch (error) {}
+
+function liberarMaquininhaMP() {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Liberar Maquininha',
+            text: 'Isso vai forçar a maquininha a sair do Modo PDV para vendas avulsas. Lembre-se de clicar em "Atualizar" na tela dela. Confirmar?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Sim, liberar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.showLoading();
+                fetch('<?= route_url('mercadopago/liberarPoint') ?>', {
+                    method: 'POST',
+                    headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''}
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.ok) {
+                            Swal.fire('Sucesso!', data.message, 'success');
+                        } else {
+                            Swal.fire('Erro', data.message, 'error');
+                        }
+                    })
+                    .catch(err => Swal.fire('Erro', 'Ocorreu um erro na requisição', 'error'));
+            }
+        });
+    } else {
+        if (confirm('Isso vai forçar a maquininha a sair do Modo PDV para vendas avulsas. Lembre-se de clicar em "Atualizar" na tela dela. Confirmar?')) {
+            fetch('<?= route_url('mercadopago/liberarPoint') ?>', {
+                method: 'POST',
+                headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''}
+            })
+                .then(r => r.json())
+                .then(data => alert(data.message))
+                .catch(err => alert('Ocorreu um erro na requisição'));
+        }
+    }
+}
 </script>
 <?php foreach (($extraScripts ?? []) as $scriptSrc): ?>
 <script src="<?= e($scriptSrc) ?>"></script>

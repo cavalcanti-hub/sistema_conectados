@@ -6,6 +6,28 @@ class OsModel {
     private $db;
     public function __construct() { $this->db = Database::getInstance(); }
 
+    private function runWithReconnect(callable $callback)
+    {
+        try {
+            return $callback();
+        } catch (\PDOException $e) {
+            if (!$this->isLostConnection($e)) {
+                throw $e;
+            }
+
+            $this->db = Database::reconnect();
+            return $callback();
+        }
+    }
+
+    private function isLostConnection(\PDOException $e): bool
+    {
+        $message = strtolower($e->getMessage());
+        return str_contains($message, 'server has gone away')
+            || str_contains($message, 'lost connection')
+            || str_contains($message, 'error while sending query');
+    }
+
     private function listQuery(array $filters = [], string $select = "os.*, c.nome as cliente_nome, c.whatsapp as cliente_whatsapp, a.modelo as aparelho_modelo, a.marca as aparelho_marca, u.nome as tecnico_nome"): array
     {
         $sql = "SELECT $select
@@ -82,7 +104,7 @@ class OsModel {
                 servico_realizar=:servico_realizar, status=:status, prioridade=:prioridade,
                 valor_mao_obra=:valor_mao_obra, valor_pecas=:valor_pecas, desconto=:desconto,
                 prazo_estimado=:prazo_estimado, forma_pagamento=:forma_pagamento, situacao_pagamento=:situacao_pagamento,
-                fotos=:fotos
+                fotos=:fotos, fotos_saida=:fotos_saida
                 WHERE id=:id";
         $data[':id'] = $id;
         if (isset($data[':status'])) {
@@ -103,6 +125,7 @@ class OsModel {
         $this->db->beginTransaction();
         try {
             $this->db->prepare("UPDATE financeiro SET os_id = NULL WHERE os_id = :id")->execute([':id' => $id]);
+            $this->db->prepare("UPDATE compras_notas SET os_id = NULL WHERE os_id = :id")->execute([':id' => $id]);
             $this->db->prepare("UPDATE pdv_vendas SET os_id = NULL WHERE os_id = :id")->execute([':id' => $id]);
             $this->db->prepare("UPDATE estoque_movimentacoes SET os_id = NULL WHERE os_id = :id")->execute([':id' => $id]);
             $this->db->prepare("DELETE FROM os_pagamentos WHERE os_id = :id")->execute([':id' => $id]);
@@ -129,9 +152,11 @@ class OsModel {
 
     public function getHistorico($os_id) {
         $sql = "SELECT h.*, u.nome as usuario_nome FROM os_historico h LEFT JOIN usuarios u ON h.usuario_id = u.id WHERE h.os_id = :id ORDER BY h.created_at ASC";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([':id' => $os_id]);
-        return $stmt->fetchAll();
+        return $this->runWithReconnect(function () use ($sql, $os_id) {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':id' => $os_id]);
+            return $stmt->fetchAll();
+        });
     }
 
     public function addHistorico($os_id, $usuario_id, $status_ant, $status_novo, $obs = '') {
@@ -149,19 +174,33 @@ class OsModel {
     }
 
     public function getPagamentos($os_id): array {
-        $stmt = $this->db->prepare("SELECT p.*, u.nome as usuario_nome
-            FROM os_pagamentos p
-            LEFT JOIN usuarios u ON p.usuario_id = u.id
-            WHERE p.os_id = :id
-            ORDER BY p.data_pagamento ASC, p.id ASC");
-        $stmt->execute([':id' => $os_id]);
-        return $stmt->fetchAll();
+        return $this->runWithReconnect(function () use ($os_id) {
+            $stmt = $this->db->prepare("SELECT p.*, u.nome as usuario_nome
+                FROM os_pagamentos p
+                LEFT JOIN usuarios u ON p.usuario_id = u.id
+                WHERE p.os_id = :id
+                ORDER BY p.data_pagamento ASC, p.id ASC");
+            $stmt->execute([':id' => $os_id]);
+            return $stmt->fetchAll();
+        });
     }
 
     public function totalPagamentos($os_id): float {
-        $stmt = $this->db->prepare("SELECT COALESCE(SUM(valor), 0) FROM os_pagamentos WHERE os_id = :id");
-        $stmt->execute([':id' => $os_id]);
-        return (float) $stmt->fetchColumn();
+        return (float) $this->runWithReconnect(function () use ($os_id) {
+            $stmt = $this->db->prepare("SELECT COALESCE(SUM(valor), 0) FROM os_pagamentos WHERE os_id = :id");
+            $stmt->execute([':id' => $os_id]);
+            return $stmt->fetchColumn();
+        });
+    }
+
+    public function updateSituacaoPagamento(int $os_id, string $situacao, string $forma_pagamento = ''): void {
+        $sql = "UPDATE ordens_servico SET situacao_pagamento = :situacao" . ($forma_pagamento ? ", forma_pagamento = :forma" : "") . " WHERE id = :id";
+        $params = [':situacao' => $situacao, ':id' => $os_id];
+        if ($forma_pagamento) {
+            $params[':forma'] = $forma_pagamento;
+        }
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
     }
 
     public function generateOSNumber() {

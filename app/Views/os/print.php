@@ -8,6 +8,7 @@
         .print-container { max-width: 800px; margin: 0 auto; border: 1px solid #eee; padding: 30px; }
         .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 20px; }
         .logo { font-size: 24px; font-weight: bold; }
+        .logo img { width: 42mm; height: auto; max-width: 42mm; object-fit: contain; display: block; }
         .os-info { text-align: right; }
         .os-number { font-size: 20px; font-weight: bold; color: #000; }
         .section { margin-bottom: 20px; }
@@ -35,7 +36,7 @@
     <div class="print-container">
         <div class="header">
             <div class="logo">
-                <img src="<?= app_url('assets/img/logo.png') ?>" alt="Conectados" style="height: 60px; max-width: 250px; filter: brightness(0);">
+                <img src="<?= app_url('assets/img/logo-print.png') ?>" alt="Conectados">
             </div>
             <div class="os-info">
                 <div class="os-number">ORDEM DE SERVIÇO #<?= $os['numero_os'] ?></div>

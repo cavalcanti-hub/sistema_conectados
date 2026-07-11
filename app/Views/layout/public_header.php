@@ -197,7 +197,7 @@ $shareImageType = [
     <link rel="icon" type="image/png" sizes="32x32" href="<?= app_url('favicon.png') ?>">
     <link rel="icon" type="image/png" sizes="16x16" href="<?= app_url('assets/icons/icon-16x16.png') ?>">
     <link rel="apple-touch-icon" href="<?= app_url('assets/icons/icon-180x180.png') ?>">
-    <link rel="manifest" href="<?= app_url('manifest.webmanifest') ?>?v=20260703-electric-blue">
+    <link rel="manifest" href="<?= app_url('manifest.webmanifest') ?>?v=20260704-pwa-install-fix">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= app_url('assets/css/index.css') ?>?v=20260703-compact-blue">
@@ -205,22 +205,27 @@ $shareImageType = [
 <style>
     body {
         --bg-main: #eaf4ff;
-        background: linear-gradient(180deg, #f3f8ff 0%, #e6f1ff 46%, #dfeeff 100%);
+        background:
+            radial-gradient(circle at 50% 0%, rgba(45, 45, 255, 0.08), transparent 34rem),
+            linear-gradient(180deg, #f7fbff 0%, #edf6ff 48%, #e5f1ff 100%);
     }
     .commerce-shell {
-        max-width: 1440px;
+        max-width: 1480px;
         margin: 0 auto;
-        padding: 0 1.5rem;
+        padding: 0 clamp(1rem, 2vw, 1.75rem);
     }
     .store-offer-strip {
-        background: linear-gradient(90deg, var(--primary), #0756d6 52%, var(--primary-dark));
-        border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+        background:
+            linear-gradient(90deg, rgba(255,255,255,.12), rgba(255,255,255,0) 22%, rgba(255,255,255,.12) 74%, rgba(255,255,255,0)),
+            linear-gradient(90deg, #1012b8, var(--primary) 48%, #1012b8);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         color: #fff;
-        font-size: 0.86rem;
+        font-size: 0.8rem;
         font-weight: 800;
         overflow: hidden;
         user-select: none;
         cursor: pointer;
+        box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.14);
     }
     .store-offer-strip:focus-visible {
         outline: 3px solid rgba(255, 255, 255, 0.85);
@@ -229,9 +234,9 @@ $shareImageType = [
     .offer-track {
         display: flex;
         width: max-content;
-        min-height: 42px;
+        min-height: 34px;
         align-items: center;
-        animation: offerMarquee 26s linear infinite;
+        animation: offerMarquee 24s linear infinite;
     }
     .store-offer-strip.is-paused .offer-track,
     .store-offer-strip:active .offer-track {
@@ -240,8 +245,8 @@ $shareImageType = [
     .offer-group {
         display: flex;
         align-items: center;
-        gap: 2rem;
-        padding-right: 2rem;
+        gap: 1.8rem;
+        padding-right: 1.8rem;
     }
     .offer-item {
         display: inline-flex;
@@ -263,25 +268,31 @@ $shareImageType = [
         position: sticky;
         top: 0;
         z-index: 1100;
-        background: var(--sidebar-bg);
-        box-shadow: 0 16px 36px -32px rgba(0, 20, 70, 0.65);
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0) 58%),
+            linear-gradient(110deg, #3131ff 0%, var(--primary) 48%, #2020dc 100%);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+        box-shadow: 0 20px 46px -36px rgba(0, 20, 70, 0.88);
     }
     .store-header-main {
         display: grid;
-        grid-template-columns: auto minmax(0, 1fr) auto;
-        gap: 1.25rem;
+        grid-template-columns: minmax(154px, 220px) minmax(360px, 1fr) auto;
+        gap: clamp(0.8rem, 1.45vw, 1.35rem);
         align-items: center;
-        padding-top: 1rem;
-        padding-bottom: 1rem;
+        min-height: 86px;
+        padding-top: 0.82rem;
+        padding-bottom: 0.82rem;
     }
     .brand-link {
         display: inline-flex;
         align-items: center;
         text-decoration: none;
+        min-width: 0;
     }
     .brand-logo {
-        height: 60px;
-        width: auto;
+        width: min(100%, 210px);
+        max-height: 62px;
+        height: auto;
         display: block;
         filter:
             brightness(1.45)
@@ -292,14 +303,25 @@ $shareImageType = [
     }
     .store-search {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 220px 62px;
+        grid-template-columns: minmax(0, 1fr) minmax(166px, 218px) 58px;
         gap: 0;
         align-items: stretch;
-        background: #fff;
-        border: 2px solid rgba(255, 255, 255, 0.18);
-        border-radius: 999px;
+        min-height: 54px;
+        background: rgba(255, 255, 255, 0.98);
+        border: 1px solid rgba(255, 255, 255, 0.76);
+        border-radius: 14px;
         overflow: hidden;
-        box-shadow: 0 18px 34px -30px rgba(0, 0, 0, 0.45);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.95),
+            0 18px 42px -32px rgba(0, 0, 0, 0.62);
+        transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease;
+    }
+    .store-search:focus-within {
+        border-color: rgba(255, 255, 255, 0.98);
+        box-shadow:
+            0 0 0 4px rgba(255, 255, 255, 0.2),
+            0 22px 48px -30px rgba(0, 0, 0, 0.7);
+        transform: translateY(-1px);
     }
     .store-search-input,
     .store-search-select {
@@ -309,7 +331,7 @@ $shareImageType = [
         background: #fff;
     }
     .store-search-input {
-        padding: 0 1rem 0 1.1rem;
+        padding: 0 1rem 0 1.05rem;
     }
     .store-search-input input,
     .store-search-select select {
@@ -318,34 +340,65 @@ $shareImageType = [
         outline: none;
         background: transparent;
         color: #0f172a;
-        font-size: 0.96rem;
+        font-size: 0.95rem;
+        line-height: 1.2;
+    }
+    .store-search-input input::placeholder {
+        color: #64748b;
     }
     .store-search-select {
+        position: relative;
         padding: 0 1rem;
         border-left: 1px solid rgba(0, 52, 154, 0.1);
+        background: #f8fbff;
+    }
+    .store-search-select select {
+        appearance: none;
+        padding-right: 1.35rem;
+        cursor: pointer;
+        font-weight: 700;
+    }
+    .store-search-select::after {
+        content: "";
+        position: absolute;
+        right: 1rem;
+        width: 8px;
+        height: 8px;
+        border-right: 2px solid #1f2a44;
+        border-bottom: 2px solid #1f2a44;
+        transform: rotate(45deg) translateY(-2px);
+        pointer-events: none;
     }
     .store-search-submit {
         border: none;
-        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        background: #111827;
         color: #fff;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
+        transition: background .18s ease, transform .18s ease;
+    }
+    .store-search-submit:hover {
+        background: #020617;
+    }
+    .store-search-submit:active {
+        transform: scale(0.97);
     }
     .store-actions {
         display: flex;
         align-items: center;
-        gap: 0.7rem;
+        justify-content: flex-end;
+        gap: 0.56rem;
         min-width: 0;
     }
     .icon-link,
     .cart-trigger {
-        width: 46px;
-        height: 46px;
+        width: 48px;
+        height: 48px;
         border-radius: 999px;
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        background: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.54);
+        background: rgba(255, 255, 255, 0.96);
         color: #10233f;
         display: inline-flex;
         align-items: center;
@@ -353,31 +406,48 @@ $shareImageType = [
         text-decoration: none;
         position: relative;
         cursor: pointer;
-        box-shadow: 0 16px 24px -24px rgba(0, 0, 0, 0.45);
+        box-shadow: 0 16px 28px -24px rgba(0, 0, 0, 0.6);
+        transition: transform .18s ease, box-shadow .18s ease, background .18s ease, color .18s ease;
+    }
+    .icon-link:hover,
+    .cart-trigger:hover {
+        transform: translateY(-2px);
+        background: #fff;
+        box-shadow: 0 20px 34px -24px rgba(0, 0, 0, 0.72);
+    }
+    .icon-link:focus-visible,
+    .cart-trigger:focus-visible,
+    .store-search-submit:focus-visible,
+    .store-nav-link:focus-visible {
+        outline: 3px solid rgba(255, 255, 255, 0.72);
+        outline-offset: 3px;
     }
     .store-actions .admin-panel-link {
         width: auto;
         min-width: max-content;
-        min-height: 46px;
-        padding: 0 1rem;
+        min-height: 48px;
+        padding: 0 1.05rem;
         gap: 0.55rem;
         font-weight: 800;
         white-space: nowrap;
     }
     .cart-trigger {
         width: auto;
-        padding: 0 1rem 0 0.95rem;
+        padding: 0 0.7rem 0 1rem;
         gap: 0.65rem;
         font-weight: 800;
         border-radius: 999px;
+        background: #0f172a;
+        border-color: rgba(255, 255, 255, 0.32);
+        color: #fff;
     }
     .cart-trigger-count {
         min-width: 22px;
         height: 22px;
         padding: 0 6px;
         border-radius: 999px;
-        background: #0f172a;
-        color: #fff;
+        background: #fff;
+        color: #0f172a;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -394,15 +464,16 @@ $shareImageType = [
         height: 18px;
         padding: 0 5px;
         border-radius: 999px;
-        background: var(--primary);
+        background: #e11d48;
         color: #fff;
         font-size: 0.68rem;
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.95);
     }
     .store-nav {
-        background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,251,255,.98));
+        background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(245,249,255,.98));
         color: #092347;
         border-top: 1px solid rgba(0, 52, 154, 0.08);
         border-bottom: 1px solid rgba(0, 52, 154, 0.08);
@@ -414,20 +485,40 @@ $shareImageType = [
         align-items: center;
         justify-content: flex-start;
         gap: 1rem;
-        min-height: 66px;
+        min-height: 58px;
         min-width: 0;
+        position: relative;
+    }
+    .store-nav-inner::before,
+    .store-nav-inner::after {
+        content: "";
+        position: absolute;
+        top: 0.35rem;
+        bottom: 0.35rem;
+        width: 2rem;
+        pointer-events: none;
+        z-index: 2;
+    }
+    .store-nav-inner::before {
+        left: 0;
+        background: linear-gradient(90deg, rgba(245,249,255,.98), transparent);
+    }
+    .store-nav-inner::after {
+        right: 0;
+        background: linear-gradient(270deg, rgba(245,249,255,.98), transparent);
     }
     .store-nav-primary {
         display: flex;
         align-items: center;
-        gap: .35rem;
+        gap: .42rem;
         min-width: 0;
     }
     .store-nav-primary {
         overflow-x: auto;
         scrollbar-width: none;
-        padding: .45rem 0;
+        padding: .5rem 0;
         flex: 1 1 auto;
+        scroll-padding-inline: 1rem;
     }
     .store-nav-primary::-webkit-scrollbar {
         display: none;
@@ -438,19 +529,19 @@ $shareImageType = [
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
-        min-height: 42px;
-        padding: 0 .95rem;
-        border: 0;
-        border-radius: 999px;
-        background: transparent;
+        min-height: 38px;
+        padding: 0 .88rem;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.54);
         color: #123057;
         font: inherit;
         text-decoration: none;
         white-space: nowrap;
-        font-size: 0.88rem;
+        font-size: 0.84rem;
         font-weight: 800;
         cursor: pointer;
-        transition: background .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
+        transition: background .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease, border-color .18s ease;
     }
     .store-nav-link i {
         width: 16px;
@@ -463,21 +554,23 @@ $shareImageType = [
         position: absolute;
         left: 1.05rem;
         right: 1.05rem;
-        bottom: 3px;
+        bottom: 4px;
         height: 2px;
         border-radius: 999px;
         background: transparent;
         transition: background .18s ease;
     }
     .store-nav-link:hover {
-        background: #f3f7ff;
+        background: #fff;
         color: var(--primary);
         transform: translateY(-1px);
+        border-color: rgba(45, 45, 255, 0.12);
     }
     .store-nav-link.is-active {
-        background: #eef5ff;
+        background: #fff;
         color: var(--primary);
-        box-shadow: inset 0 0 0 1px rgba(0, 52, 154, 0.1), 0 12px 26px -22px rgba(0, 52, 154, 0.7);
+        border-color: rgba(45, 45, 255, 0.16);
+        box-shadow: 0 12px 26px -22px rgba(0, 52, 154, 0.7);
     }
     .store-nav-link.is-active i {
         color: var(--primary);
@@ -487,6 +580,7 @@ $shareImageType = [
     }
     .store-nav-link.is-emphasis {
         background: var(--primary);
+        border-color: rgba(45, 45, 255, 0.2);
         color: #fff;
         box-shadow: 0 16px 28px -22px rgba(0, 52, 154, .85);
     }
@@ -495,7 +589,7 @@ $shareImageType = [
     }
     .store-nav-link.is-muted {
         background: #f5f8fe;
-        box-shadow: inset 0 0 0 1px rgba(0, 52, 154, 0.08);
+        border-color: rgba(0, 52, 154, 0.08);
     }
     .category-dot {
         width: 7px;
@@ -614,22 +708,29 @@ $shareImageType = [
         transform: none;
         box-shadow: none;
     }
-    @media (max-width: 1080px) {
+    @media (max-width: 1180px) {
         .store-header-main {
-            grid-template-columns: 1fr;
+            grid-template-columns: minmax(130px, 210px) minmax(0, 1fr);
+            min-height: auto;
+        }
+        .store-search {
+            grid-column: 1 / -1;
+            grid-row: 2;
         }
         .store-actions {
-            justify-content: flex-start;
+            justify-content: flex-end;
         }
         .offer-track {
             animation-duration: 22s;
         }
+    }
+    @media (max-width: 980px) {
         .store-nav-inner {
             align-items: stretch;
             flex-direction: column;
             gap: .35rem;
-            padding-top: .55rem;
-            padding-bottom: .55rem;
+            padding-top: .35rem;
+            padding-bottom: .35rem;
         }
     }
     @media (max-width: 780px) {
@@ -639,44 +740,113 @@ $shareImageType = [
             padding-right: 1rem;
         }
         .offer-group {
-            gap: 1.4rem;
-            padding-right: 1.4rem;
+            gap: 1.2rem;
+            padding-right: 1.2rem;
         }
         .offer-track {
-            min-height: 40px;
+            min-height: 32px;
             animation-duration: 18s;
         }
+        .store-header-main {
+            grid-template-columns: auto minmax(0, 1fr);
+            gap: .72rem;
+            padding-top: .65rem;
+            padding-bottom: .75rem;
+        }
+        .brand-logo {
+            width: clamp(126px, 34vw, 172px);
+            max-height: 52px;
+        }
+        .store-actions {
+            gap: .42rem;
+            overflow-x: auto;
+            overscroll-behavior-inline: contain;
+            scrollbar-width: none;
+            padding: .1rem 0;
+        }
+        .store-actions::-webkit-scrollbar {
+            display: none;
+        }
+        .icon-link,
+        .cart-trigger {
+            width: 44px;
+            height: 44px;
+            flex: 0 0 auto;
+        }
+        .store-actions .admin-panel-link {
+            width: 44px;
+            min-width: 44px;
+            min-height: 44px;
+            padding: 0;
+            justify-content: center;
+        }
+        .store-actions .admin-panel-link span {
+            display: none;
+        }
+        .cart-trigger {
+            width: auto;
+            height: 44px;
+            padding: 0 .55rem 0 .78rem;
+        }
         .store-nav-link {
-            min-height: 40px;
-            padding: 0 .82rem;
-            font-size: .84rem;
+            min-height: 38px;
+            padding: 0 .75rem;
+            font-size: .82rem;
         }
         .store-search {
-            grid-template-columns: minmax(0, 1fr) 52px;
-            border-radius: 24px;
+            grid-template-columns: minmax(0, 1fr) minmax(130px, 38%) 52px;
+            min-height: 48px;
+            border-radius: 12px;
         }
         .store-search-input {
             grid-column: 1;
-            min-height: 44px;
+            min-height: 48px;
+            padding-left: .9rem;
+        }
+        .store-search-select {
+            padding: 0 .85rem;
+        }
+        .store-search-select::after {
+            right: .82rem;
+        }
+        .store-search-input input,
+        .store-search-select select {
+            font-size: .9rem;
+        }
+        .store-search-submit {
+            grid-column: 3;
+            min-height: 48px;
+        }
+    }
+    @media (max-width: 620px) {
+        .store-search {
+            grid-template-columns: minmax(0, 1fr) 50px;
         }
         .store-search-select {
             display: none;
         }
         .store-search-submit {
             grid-column: 2;
-            min-height: 44px;
         }
-        .store-actions {
-            flex-wrap: wrap;
+    }
+    @media (max-width: 520px) {
+        .store-header-main {
+            grid-template-columns: 1fr;
         }
-        .store-actions .admin-panel-link {
-            width: 46px;
-            min-width: 46px;
-            padding: 0;
+        .brand-link {
             justify-content: center;
         }
-        .store-actions .admin-panel-link span {
+        .store-actions {
+            justify-content: center;
+            width: 100%;
+        }
+        .cart-trigger > span:not(.cart-trigger-count) {
             display: none;
+        }
+        .cart-trigger {
+            width: 44px;
+            padding: 0;
+            justify-content: center;
         }
     }
 </style>
@@ -703,13 +873,13 @@ $shareImageType = [
             <img class="brand-logo" src="<?= app_url('assets/img/logo.png') ?>" alt="<?= htmlspecialchars($companyName) ?>">
         </a>
 
-        <form class="store-search" action="<?= route_url('vitrine/catalogo') ?>" method="GET">
+        <form class="store-search" action="<?= route_url('vitrine/catalogo') ?>" method="GET" role="search" aria-label="Buscar produtos na vitrine">
             <label class="store-search-input">
                 <i data-lucide="search" style="width: 18px; height: 18px; color: #475569;"></i>
-                <input type="text" name="search" value="<?= htmlspecialchars($searchValue) ?>" placeholder="Pesquisar produtos, marcas e acessorios">
+                <input type="text" name="search" value="<?= htmlspecialchars($searchValue) ?>" placeholder="Pesquisar produtos, marcas e acessorios" aria-label="Pesquisar produtos" autocomplete="off">
             </label>
             <label class="store-search-select">
-                <select name="categoria">
+                <select name="categoria" aria-label="Filtrar por categoria">
                     <option value="">Categorias</option>
                     <?php foreach ($headerCategories as $cat): ?>
                     <option value="<?= htmlspecialchars($cat) ?>" <?= strcasecmp($selectedCategory, $cat) === 0 ? 'selected' : '' ?>><?= htmlspecialchars($cat) ?></option>
@@ -723,22 +893,22 @@ $shareImageType = [
 
         <div class="store-actions">
             <?php if ($adminLoggedIn): ?>
-            <a class="icon-link admin-panel-link" href="<?= route_url('dashboard') ?>" title="Voltar para o painel admin">
+            <a class="icon-link admin-panel-link" href="<?= route_url('dashboard') ?>" title="Voltar para o painel admin" aria-label="Voltar para o painel admin">
                 <i data-lucide="arrow-left" style="width: 19px; height: 19px;"></i>
                 <span>Painel admin</span>
             </a>
             <?php endif; ?>
-            <a class="icon-link" href="<?= route_url('vitrine') ?>" title="Inicio">
+            <a class="icon-link" href="<?= route_url('vitrine') ?>" title="Inicio" aria-label="Ir para o inicio">
                 <i data-lucide="house" style="width: 20px; height: 20px;"></i>
             </a>
-            <button class="icon-link favorites-trigger" type="button" onclick="toggleFavorites()" title="Favoritos">
+            <button class="icon-link favorites-trigger" type="button" onclick="toggleFavorites()" title="Favoritos" aria-label="Abrir favoritos">
                 <i data-lucide="heart" style="width: 20px; height: 20px;"></i>
                 <span class="favorites-count" id="favorites-count">0</span>
             </button>
-            <button class="icon-link" type="button" onclick="toggleAccountModal()" title="Conta">
+            <button class="icon-link" type="button" onclick="toggleAccountModal()" title="Conta" aria-label="Abrir conta">
                 <i data-lucide="user" style="width: 20px; height: 20px;"></i>
             </button>
-            <button onclick="toggleCart()" class="cart-trigger" type="button" title="Carrinho">
+            <button onclick="toggleCart()" class="cart-trigger" type="button" title="Carrinho" aria-label="Abrir carrinho">
                 <i data-lucide="shopping-cart" style="width: 19px; height: 19px;"></i>
                 <span>Carrinho</span>
                 <span class="cart-trigger-count" id="cart-count">0</span>
@@ -837,7 +1007,10 @@ $shareImageType = [
         <div class="card" style="padding:1.25rem;">
             <p style="margin:0 0 0.5rem;font-weight:800;"><?= htmlspecialchars($publicAccountName) ?></p>
             <p style="margin:0;color:var(--text-muted);"><?= htmlspecialchars($_SESSION['conta_publica_email'] ?? '') ?></p>
-            <a href="<?= route_url('vitrine/sairConta') ?>" class="btn btn-outline" style="margin-top:1rem;text-decoration:none;">Sair</a>
+            <form action="<?= e(route_url('vitrine/sairConta')) ?>" method="POST" style="margin-top:1rem;">
+                <?= csrf_field() ?>
+                <button type="submit" class="btn btn-outline" style="width:100%;">Sair</button>
+            </form>
         </div>
         <?php else: ?>
         <form action="<?= e(route_url('vitrine/cadastrarConta')) ?>" method="POST">

@@ -1,4 +1,16 @@
 <?php
+/**
+ * @var string $title
+ * @var string|null $periodo
+ * @var string|null $tipo
+ * @var array $movimentacoes
+ * @var float $receitas
+ * @var float $despesas
+ * @var float $lucro
+ * @var array $formas
+ * @var array $categorias_despesas
+ */
+
 $periodoLabels = [
     'dia' => 'Hoje',
     'semana' => 'Semana atual',
@@ -6,7 +18,11 @@ $periodoLabels = [
     'todos' => 'Todos os lancamentos',
 ];
 
-$periodoLabel = $periodoLabels[$periodo ?? 'dia'] ?? 'Hoje';
+if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $periodo ?? '')) {
+    $periodoLabel = 'Dia ' . date('d/m/Y', strtotime($periodo));
+} else {
+    $periodoLabel = $periodoLabels[$periodo ?? 'dia'] ?? 'Hoje';
+}
 $totalLancamentos = count($movimentacoes ?? []);
 $resultado = (float) $lucro;
 $logoUrl = asset_url('assets/img/logo-print.png?v=20260702-banner');

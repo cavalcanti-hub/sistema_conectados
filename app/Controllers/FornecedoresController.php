@@ -40,6 +40,7 @@ class FornecedoresController extends Controller
             'fornecedoresAtivos' => $this->fornecedores->getAll('', true),
             'notas' => $notas,
             'produtos' => $this->estoque->getAll('', '', null),
+            'ordensServico' => (new \App\Models\OsModel())->getAll([], 200),
             'filters' => $filters,
             'formasPagamento' => $this->formasPagamento(),
             'tipos' => ['peca' => 'Peca tecnica', 'produto' => 'Produto da loja'],
@@ -90,7 +91,15 @@ class FornecedoresController extends Controller
     public function storeNota(): void
     {
         try {
-            $this->notas->create($this->notaPayload(), $this->itemsPayload());
+            $id = $this->notas->create($this->notaPayload(), $this->itemsPayload());
+            $nota = $this->notas->find($id);
+            (new \App\Models\AuditModel())->record('criar', 'nota_compra', $id, 'Nota de compra lancada: ' . ($nota['numero'] ?: '#' . $id), [
+                'fornecedor' => $nota['fornecedor_nome'] ?? '',
+                'valor_total' => $nota['valor_total'] ?? '',
+            ]);
+            if (!empty($_FILES['anexo_nota']['name']) && !empty($nota['anexo_nome'])) {
+                (new \App\Models\AuditModel())->record('anexar', 'nota_compra', $id, 'Anexo incluido na nota de compra: ' . ($nota['anexo_original'] ?: $nota['anexo_nome']));
+            }
             $this->redirect(route_url('fornecedores', ['nota_success' => 1]));
         } catch (\Throwable $e) {
             $_SESSION['fornecedores_error'] = $e->getMessage();
@@ -106,6 +115,14 @@ class FornecedoresController extends Controller
                 throw new \RuntimeException('Nota invalida.');
             }
             $this->notas->update($id, $this->notaPayload(), $this->itemsPayload());
+            $nota = $this->notas->find($id);
+            (new \App\Models\AuditModel())->record('editar', 'nota_compra', $id, 'Nota de compra editada: ' . ($nota['numero'] ?: '#' . $id), [
+                'fornecedor' => $nota['fornecedor_nome'] ?? '',
+                'valor_total' => $nota['valor_total'] ?? '',
+            ]);
+            if (!empty($_FILES['anexo_nota']['name']) && !empty($nota['anexo_nome'])) {
+                (new \App\Models\AuditModel())->record('anexar', 'nota_compra', $id, 'Anexo atualizado na nota de compra: ' . ($nota['anexo_original'] ?: $nota['anexo_nome']));
+            }
             $this->redirect(route_url('fornecedores', ['nota_updated' => 1]));
         } catch (\Throwable $e) {
             $_SESSION['fornecedores_error'] = $e->getMessage();
@@ -120,7 +137,14 @@ class FornecedoresController extends Controller
             if ($id <= 0) {
                 throw new \RuntimeException('Nota invalida.');
             }
-            $this->notas->baixar($id);
+            $nota = $this->notas->find($id);
+            $osId = !empty($_POST['os_id']) ? (int) $_POST['os_id'] : null;
+            $this->notas->baixar($id, $osId);
+            (new \App\Models\AuditModel())->record('baixar', 'nota_compra', $id, 'Nota de compra baixada: ' . (($nota['numero'] ?? '') ?: '#' . $id), [
+                'fornecedor' => $nota['fornecedor_nome'] ?? '',
+                'valor_total' => $nota['valor_total'] ?? '',
+                'os_id' => $osId ?: ($nota['os_id'] ?? null),
+            ]);
             $this->redirect(route_url('fornecedores', ['baixada' => 1]));
         } catch (\Throwable $e) {
             $_SESSION['fornecedores_error'] = $e->getMessage();
@@ -132,21 +156,93 @@ class FornecedoresController extends Controller
     {
         $id = (int) ($_POST['id'] ?? 0);
         if ($id > 0) {
+            $nota = $this->notas->find($id);
             $this->notas->cancelar($id);
+            (new \App\Models\AuditModel())->record('cancelar', 'nota_compra', $id, 'Nota de compra cancelada: ' . (($nota['numero'] ?? '') ?: '#' . $id), [
+                'fornecedor' => $nota['fornecedor_nome'] ?? '',
+                'valor_total' => $nota['valor_total'] ?? '',
+            ]);
         }
         $this->redirect(route_url('fornecedores', ['cancelada' => 1]));
     }
 
+    public function imprimirNota(): void
+    {
+        $id = (int) ($_GET['id'] ?? 0);
+        $nota = $id > 0 ? $this->notas->find($id) : null;
+        if (!$nota) {
+            $this->redirect(route_url('fornecedores'));
+        }
+
+        $settings = (new \App\Models\ConfigModel())->getAll();
+        $company = [
+            'name' => trim((string) ($settings['nome_empresa'] ?? 'Conectados')),
+            'phone' => trim((string) ($settings['whatsapp'] ?? '')),
+            'address' => trim((string) ($settings['endereco'] ?? '')),
+            'website' => trim((string) ($settings['website'] ?? 'conectadosassistencia.com.br')),
+            'logo_print' => asset_url('assets/img/logo-print.png?v=20260702-banner'),
+        ];
+
+        $this->view('fornecedores/print_nota', ['nota' => $nota, 'company' => $company]);
+    }
+
+    public function anexoNota(): void
+    {
+        $id = (int) ($_GET['id'] ?? 0);
+        $nota = $id > 0 ? $this->notas->find($id) : null;
+        if (!$nota || empty($nota['anexo_nome'])) {
+            http_response_code(404);
+            echo 'Anexo nao encontrado.';
+            return;
+        }
+
+        $fileName = basename((string) $nota['anexo_nome']);
+        $path = public_path('uploads/notas_compra/' . $fileName);
+        if (!is_file($path)) {
+            http_response_code(404);
+            echo 'Arquivo do anexo nao encontrado.';
+            return;
+        }
+
+        $mime = (string) ($nota['anexo_mime'] ?? '');
+        if ($mime === '') {
+            $mime = 'application/octet-stream';
+        }
+        $original = basename((string) ($nota['anexo_original'] ?: $fileName));
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header('Content-Type: ' . $mime);
+        header('Content-Disposition: inline; filename="' . str_replace('"', '', $original) . '"');
+        header('Content-Length: ' . filesize($path));
+        header('X-Content-Type-Options: nosniff');
+        readfile($path);
+        exit;
+    }
+
     private function notaPayload(): array
     {
-        return [
+        $payload = [
             'fornecedor_id' => (int) ($_POST['fornecedor_id'] ?? 0),
+            'os_id' => (int) ($_POST['os_id'] ?? 0),
             'numero' => $_POST['numero'] ?? '',
             'data_emissao' => $_POST['data_emissao'] ?? date('Y-m-d'),
             'data_vencimento' => $_POST['data_vencimento'] ?? '',
             'forma_pagamento' => $_POST['forma_pagamento'] ?? '',
             'observacoes' => $_POST['observacoes'] ?? '',
         ];
+
+        $upload = validate_and_store_document_upload($_FILES['anexo_nota'] ?? [], 'notas_compra');
+        if (!$upload['ok']) {
+            throw new \RuntimeException((string) $upload['error']);
+        }
+        if (!empty($upload['name'])) {
+            $payload['anexo_nome'] = $upload['name'];
+            $payload['anexo_original'] = $upload['original'];
+            $payload['anexo_mime'] = $upload['mime'];
+        }
+
+        return $payload;
     }
 
     private function itemsPayload(): array

@@ -144,7 +144,11 @@ class EstoqueController extends Controller
         $payload[':imagem_mime'] = $this->uploadedImageMime;
         $payload[':imagem_blob'] = $this->uploadedImageBlob;
         $this->abortInvalidPayload($payload);
-        $this->model->create($payload);
+        $id = (int) $this->model->create($payload);
+        (new \App\Models\AuditModel())->record('criar', 'estoque', $id, 'Item de estoque criado: ' . $payload[':nome'], [
+            'quantidade' => $payload[':quantidade'],
+            'tipo' => $payload[':tipo'],
+        ]);
         $this->redirect(absolute_route_url('estoque', ['success' => 1]));
     }
 
@@ -181,13 +185,19 @@ class EstoqueController extends Controller
         }
         $this->abortInvalidPayload($payload);
         $this->model->update($id, $payload);
+        (new \App\Models\AuditModel())->record('editar', 'estoque', (int) $id, 'Item de estoque editado: ' . $payload[':nome'], [
+            'quantidade' => $payload[':quantidade'],
+            'preco_venda' => $payload[':preco_venda'],
+        ]);
         $this->redirect(absolute_route_url('estoque', ['success' => 1]));
     }
 
     public function delete()
     {
         $id = $_POST['id'] ?? 0;
+        $item = $this->model->find($id);
         $this->model->delete($id);
+        (new \App\Models\AuditModel())->record('excluir', 'estoque', (int) $id, 'Item de estoque excluido: ' . ($item['nome'] ?? '#' . $id));
         $this->redirect(absolute_route_url('estoque'));
     }
 
@@ -203,6 +213,12 @@ class EstoqueController extends Controller
             } else {
                 $this->model->baixarEstoque($id, $qtd, null, current_user_id(), $motivo !== '' ? $motivo : 'Baixa manual');
             }
+            $item = $this->model->find($id);
+            (new \App\Models\AuditModel())->record($tipo === 'entrada' ? 'entrada' : 'saida', 'estoque', (int) $id, 'Movimentacao de estoque: ' . ($item['nome'] ?? '#' . $id), [
+                'tipo' => $tipo,
+                'quantidade' => $qtd,
+                'motivo' => $motivo,
+            ]);
         } catch (\Throwable $e) {
             $this->redirect(absolute_route_url('estoque', ['erro_msg' => substr($e->getMessage(), 0, 160)]));
         }

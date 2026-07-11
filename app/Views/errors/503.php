@@ -1,0 +1,1 @@
+<?php $statusCode = 503; $errorTitle = 'Atualização de banco necessária'; $defaultMessage = 'A estrutura do banco de dados desta instalação está desatualizada. Contate o administrador para executar a atualização.'; require __DIR__ . '/_error.php';
