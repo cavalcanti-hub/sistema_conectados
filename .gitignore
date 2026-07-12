@@ -22,6 +22,8 @@ config.production.php
 *.pfx
 *.p12
 cookies*
+public_cookie.txt
+storage_cookie.txt
 session*
 sessions/
 desktop.ini
