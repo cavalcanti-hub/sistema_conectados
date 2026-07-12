@@ -38,7 +38,7 @@ $saldoRestante = max(0, $valorTotalOs - $totalPago);
                     $colorValue = $os['cor'] ?? '';
                     require __DIR__ . '/_color_selector.php';
                     ?>
-                    <div class="form-group" style="grid-column:span 2;"><label class="form-label">Senha / Padrão</label><input type="text" name="senha_padrao" class="form-control" value="<?= htmlspecialchars($os['senha_padrao']??'') ?>"></div>
+                    <div class="form-group" style="grid-column:span 2;"><label class="form-label">Senha / Padrão</label><input type="password" name="senha_padrao" class="form-control" value="" autocomplete="new-password"><small>Deixe em branco para manter o segredo atual.</small><label style="display:block;margin-top:.4rem;"><input type="checkbox" name="remover_senha_padrao" value="1"> Remover segredo existente</label></div>
                     <div class="form-group" style="grid-column:span 2;"><label class="form-label">Estado Físico na Entrada</label><textarea name="estado_fisico" class="form-control" rows="2"><?= htmlspecialchars($os['estado_fisico']??'') ?></textarea></div>
                     <div class="form-group" style="grid-column:span 2;">
                         <label class="form-label"><i data-lucide="camera" style="width:16px;"></i> Adicionar mais fotos</label>

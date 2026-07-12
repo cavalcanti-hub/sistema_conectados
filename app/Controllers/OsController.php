@@ -49,6 +49,17 @@ class OsController extends Controller
         return (new \App\Models\AparelhoModel())->getModelosPorMarca();
     }
 
+    private function revealDeviceSecretForView(array $os): array
+    {
+        $allowed=['Administrador','Atendente','Técnico','Tecnico'];
+        if(!in_array(current_user_profile(),$allowed,true)){$os['senha_padrao']='••••••';return $os;}
+        $stored=(string)($os['senha_padrao']??'');
+        if($stored==='')return $os;
+        try{$os['senha_padrao']=(new \App\Services\DeviceSecretService())->decrypt($stored);}
+        catch(\Throwable $e){app_log('Falha segura ao abrir segredo de aparelho',['aparelho_id'=>(int)($os['aparelho_id']??0),'erro_tipo'=>get_class($e)]);$os['senha_padrao']='••••••';}
+        return $os;
+    }
+
     private function getOsUploadDir(): string
     {
         $dir = public_path('uploads/os');
@@ -149,13 +160,15 @@ class OsController extends Controller
                 }
             }
 
+            $plainDeviceSecret=(string)($_POST['senha_padrao']??'');
+            $encryptedDeviceSecret=$plainDeviceSecret===''?'':(new \App\Services\DeviceSecretService())->encrypt($plainDeviceSecret);
             $aparelhoId = $aparelhoModel->create([
                 ':cliente_id' => $_POST['cliente_id'],
                 ':marca' => $_POST['marca'] ?? 'Geral',
                 ':modelo' => $_POST['modelo'],
                 ':imei' => $_POST['imei'] ?? '',
                 ':cor' => $_POST['cor'] ?? '',
-                ':senha_padrao' => $_POST['senha_padrao'] ?? '',
+                ':senha_padrao' => $encryptedDeviceSecret,
                 ':estado_fisico' => trim($estadoFisico)
             ]);
 
@@ -197,6 +210,7 @@ class OsController extends Controller
             (new \App\Models\AuditModel())->record('criar', 'os', (int) $osId, 'OS criada no sistema', [
                 'cliente_id' => $_POST['cliente_id'] ?? null,
                 'status' => 'Recebido',
+                'segredo_aparelho' => $plainDeviceSecret!=='' ? 'cadastrado' : 'nao_informado',
             ]);
         } catch (\Throwable $e) {
             if ($db->inTransaction()) {
@@ -250,16 +264,11 @@ class OsController extends Controller
 
         try {
             (new \App\Models\AparelhoModel())->storeModelo($_POST['marca'] ?? $osAtual['marca'], $_POST['modelo'] ?? $osAtual['modelo']);
-            $stmt = $db->prepare("UPDATE aparelhos SET marca=:marca, modelo=:modelo, imei=:imei, cor=:cor, senha_padrao=:senha_padrao, estado_fisico=:estado_fisico WHERE id=:id");
-            $stmt->execute([
-                ':marca' => $_POST['marca'] ?? $osAtual['marca'],
-                ':modelo' => $_POST['modelo'] ?? $osAtual['modelo'],
-                ':imei' => $_POST['imei'] ?? $osAtual['imei'],
-                ':cor' => $_POST['cor'] ?? $osAtual['cor'],
-                ':senha_padrao' => $_POST['senha_padrao'] ?? $osAtual['senha_padrao'],
-                ':estado_fisico' => $_POST['estado_fisico'] ?? $osAtual['estado_fisico'],
-                ':id' => $osAtual['aparelho_id']
-            ]);
+            (new \App\Models\AparelhoModel())->updateFromOs((int)$osAtual['aparelho_id'],[
+                'marca'=>$_POST['marca']??$osAtual['marca'],'modelo'=>$_POST['modelo']??$osAtual['modelo'],
+                'imei'=>$_POST['imei']??$osAtual['imei'],'cor'=>$_POST['cor']??$osAtual['cor'],
+                'estado_fisico'=>$_POST['estado_fisico']??$osAtual['estado_fisico'],
+            ],(string)($_POST['senha_padrao']??''),isset($_POST['remover_senha_padrao']));
 
             $fotosNomes = !empty($osAtual['fotos']) ? json_decode($osAtual['fotos'], true) : [];
             $fotosNomes = array_merge(is_array($fotosNomes) ? $fotosNomes : [], $this->storeOsPhotos($_FILES['fotos'] ?? []));
@@ -328,6 +337,7 @@ class OsController extends Controller
                 'status_anterior' => normalize_os_status($osAtual['status']),
                 'status_novo' => $novoStatus,
                 'valor_total' => number_format($totalOsCents / 100, 2, '.', ''),
+                'segredo_aparelho' => isset($_POST['remover_senha_padrao']) ? 'removido' : (trim((string)($_POST['senha_padrao']??''))!=='' ? 'atualizado' : 'preservado'),
             ]);
         } catch (\Throwable $e) {
             if ($db->inTransaction()) {
@@ -575,6 +585,7 @@ class OsController extends Controller
         if (!$os) {
             $this->redirect(route_url('os'));
         }
+        $os=$this->revealDeviceSecretForView($os);
         $historico = $this->model->getHistorico($id);
         $pagamentos = $this->model->getPagamentos($id);
         $totalPago = $this->model->totalPagamentos($id);

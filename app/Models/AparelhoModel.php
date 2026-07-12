@@ -7,11 +7,25 @@ class AparelhoModel {
     public function __construct() { $this->db = Database::getInstance(); }
 
     public function create($data) {
+        $plainSecret=(string)($data[':senha_padrao']??'');
+        $data[':senha_padrao']=$plainSecret===''?'':(new \App\Services\DeviceSecretService())->encrypt($plainSecret);
         $sql = "INSERT INTO aparelhos (cliente_id, marca, modelo, imei, cor, senha_padrao, estado_fisico) 
                 VALUES (:cliente_id, :marca, :modelo, :imei, :cor, :senha_padrao, :estado_fisico)";
         $stmt = $this->db->prepare($sql);
         $stmt->execute($data);
         return $this->db->lastInsertId();
+    }
+
+    public function updateFromOs(int $id,array $data,string $newSecret,bool $removeSecret=false): void
+    {
+        $sets='marca=:marca,modelo=:modelo,imei=:imei,cor=:cor,estado_fisico=:estado_fisico';
+        $params=[':id'=>$id,':marca'=>$data['marca'],':modelo'=>$data['modelo'],':imei'=>$data['imei'],':cor'=>$data['cor'],':estado_fisico'=>$data['estado_fisico']];
+        if($removeSecret){$sets.=',senha_padrao=:secret';$params[':secret']='';}
+        elseif(trim($newSecret)!==''){
+            if($newSecret==='••••••')throw new \App\Services\DeviceSecretException('Valor mascarado nao pode ser salvo como segredo.');
+            $sets.=',senha_padrao=:secret';$params[':secret']=(new \App\Services\DeviceSecretService())->encrypt($newSecret);
+        }
+        $this->db->prepare("UPDATE aparelhos SET $sets WHERE id=:id")->execute($params);
     }
 
     public function find($id) {

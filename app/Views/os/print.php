@@ -57,7 +57,7 @@
                 <div class="field"><span class="label">Aparelho:</span> <span class="value"><?= htmlspecialchars($os['marca'] . ' ' . $os['modelo']) ?></span></div>
                 <div class="field"><span class="label">IMEI/Série:</span> <span class="value"><?= $os['imei'] ?: '---' ?></span></div>
                 <div class="field"><span class="label">Cor:</span> <span class="value"><?= $os['cor'] ?: '---' ?></span></div>
-                <div class="field"><span class="label">Senha:</span> <span class="value"><?= $os['senha_padrao'] ?: '---' ?></span></div>
+                <div class="field"><span class="label">Senha:</span> <span class="value">••••••</span></div>
             </div>
         </div>
 
