@@ -14,8 +14,8 @@ CREATE TABLE IF NOT EXISTS pdv_caixas (
     valor_sangria DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     valor_informado DECIMAL(10,2) NULL,
     observacoes TEXT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uk_pdv_caixas_data (data_caixa),
     INDEX idx_pdv_caixas_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

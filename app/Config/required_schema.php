@@ -74,7 +74,7 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -118,7 +118,7 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -193,7 +193,7 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -239,7 +239,7 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -307,7 +307,7 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -405,13 +405,13 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
       'updated_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -508,7 +508,7 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -601,13 +601,13 @@ return array (
       'data_atualizacao' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -691,7 +691,7 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -873,7 +873,7 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -926,7 +926,7 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -994,7 +994,7 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -1074,7 +1074,7 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -1157,13 +1157,13 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
       'updated_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -1244,13 +1244,13 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
       'updated_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -1296,7 +1296,7 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -1358,7 +1358,7 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -1420,7 +1420,7 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -1512,13 +1512,13 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
       'updated_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -1622,13 +1622,13 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
       'updated_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -1784,13 +1784,13 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
       'updated_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -1868,7 +1868,7 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -1943,7 +1943,7 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -2060,13 +2060,13 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
       'updated_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -2246,7 +2246,7 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -2332,13 +2332,13 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
       'updated_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -2553,13 +2553,13 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
       'updated_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),
@@ -2649,7 +2649,7 @@ return array (
       'created_at' => 
       array (
         'type' => 'timestamp',
-        'nullable' => 'NO',
+        'nullable' => 'YES',
         'default' => 'current_timestamp()',
       ),
     ),

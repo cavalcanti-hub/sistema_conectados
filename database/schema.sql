@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     comissao DECIMAL(5,2) DEFAULT 0.00,
     status ENUM('Ativo', 'Inativo') DEFAULT 'Ativo',
     ultimo_login DATETIME,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Clientes
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS clientes (
     email VARCHAR(100),
     endereco TEXT,
     observacoes TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Aparelhos
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS aparelhos (
     estado_fisico TEXT,
     acessorios TEXT,
     observacoes TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
 );
 
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS estoque (
     fornecedor VARCHAR(100),
     localizacao TEXT NULL,
     imagem VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Categorias para peças e produtos
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS categorias (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
     tipo ENUM('peca', 'produto') NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uk_categorias_nome_tipo (nome, tipo)
 );
 
@@ -109,8 +109,8 @@ CREATE TABLE IF NOT EXISTS ordens_servico (
     garantia_expira DATE,
     termo_aceite BOOLEAN DEFAULT FALSE,
     fotos_entrada JSON, -- Caminhos das fotos
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (cliente_id) REFERENCES clientes(id),
     FOREIGN KEY (aparelho_id) REFERENCES aparelhos(id),
     FOREIGN KEY (tecnico_id) REFERENCES usuarios(id)
@@ -124,7 +124,7 @@ CREATE TABLE IF NOT EXISTS os_historico (
     status_anterior VARCHAR(50),
     status_novo VARCHAR(50),
     observacao TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (os_id) REFERENCES ordens_servico(id) ON DELETE CASCADE,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
 );
@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS financeiro (
     usuario_id INT,
     data_pagamento DATE,
     forma_pagamento VARCHAR(50),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (os_id) REFERENCES ordens_servico(id) ON DELETE SET NULL,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
 );
@@ -153,7 +153,7 @@ CREATE TABLE IF NOT EXISTS auditoria (
     tabela VARCHAR(50),
     registro_id INT,
     ip_address VARCHAR(45),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
 );
 
@@ -202,7 +202,7 @@ CREATE TABLE IF NOT EXISTS mercado_livre_logs (
     status VARCHAR(40) NOT NULL,
     mensagem TEXT NULL,
     payload MEDIUMTEXT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (produto_id) REFERENCES estoque(id) ON DELETE SET NULL
 );
 
@@ -213,6 +213,6 @@ CREATE TABLE IF NOT EXISTS mercado_pago_logs (
     status VARCHAR(40) NULL,
     mensagem TEXT NULL,
     payload MEDIUMTEXT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_mp_logs_ref (external_reference)
 );

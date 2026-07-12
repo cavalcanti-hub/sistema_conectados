@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS mercado_livre_logs (
     status VARCHAR(40) NOT NULL,
     mensagem TEXT NULL,
     payload MEDIUMTEXT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_ml_logs_produto (produto_id),
     CONSTRAINT fk_mercado_livre_logs_produto FOREIGN KEY (produto_id) REFERENCES estoque(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS estoque_imagens (
     imagem VARCHAR(255) NOT NULL,
     imagem_mime VARCHAR(100) NULL,
     ordem INT NOT NULL DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_estoque_imagens_produto (produto_id, ordem, id),
     CONSTRAINT fk_estoque_imagens_produto FOREIGN KEY (produto_id) REFERENCES estoque(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS os_pagamentos (
     data_pagamento DATE NOT NULL,
     observacao VARCHAR(255) NULL,
     usuario_id INT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_os_pagamentos_os (os_id, data_pagamento, id),
     CONSTRAINT fk_os_pagamentos_os FOREIGN KEY (os_id) REFERENCES ordens_servico(id) ON DELETE CASCADE,
     CONSTRAINT fk_os_pagamentos_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS mercado_pago_logs (
     status VARCHAR(40) NULL,
     mensagem TEXT NULL,
     payload MEDIUMTEXT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_mp_logs_ref (external_reference)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
