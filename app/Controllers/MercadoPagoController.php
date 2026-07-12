@@ -8,18 +8,19 @@ class MercadoPagoController extends Controller
     public function pointWebhook(): void
     {
         header('Content-Type: application/json; charset=utf-8');
-
         $raw = file_get_contents('php://input') ?: '';
-        $payload = json_decode($raw, true);
-        if (!is_array($payload)) {
-            $payload = $_POST ?: $_GET ?: [];
-        }
-
         try {
-            $result = (new \App\Models\MercadoPagoPointModel())->processWebhook($payload);
+            $signature=(string)($_SERVER['HTTP_X_SIGNATURE']??'');
+            $requestId=(string)($_SERVER['HTTP_X_REQUEST_ID']??'');
+            $dataId=$_GET['data.id']??($_GET['data_id']??null);
+            $validated=(new \App\Services\MercadoPagoWebhookValidator())->validate($raw,$signature,$requestId,is_string($dataId)?$dataId:null);
+            $result = (new \App\Models\MercadoPagoPointModel())->processWebhook($validated['payload']);
             echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        } catch (\App\Services\MercadoPagoWebhookException $e) {
+            http_response_code($e->httpStatus);
+            echo json_encode(['ok'=>false,'code'=>$e->domainCode,'message'=>'Webhook rejeitado.']);
         } catch (\Throwable $e) {
-            app_log('Falha no webhook Mercado Pago Point', ['erro' => $e->getMessage(), 'payload' => $payload]);
+            app_log('Falha segura no webhook Mercado Pago Point', ['erro_tipo' => get_class($e)]);
             http_response_code(500);
             echo json_encode(['ok' => false, 'message' => 'Falha ao processar webhook Point.']);
         }
@@ -39,27 +40,12 @@ class MercadoPagoController extends Controller
                 return;
             }
 
-            $ch = curl_init("https://api.mercadopago.com/point/integration-api/devices/{$deviceId}");
-            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PATCH');
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['operating_mode' => 'STANDALONE']));
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Authorization: Bearer ' . $accessToken,
-                'Content-Type: application/json'
-            ]);
-
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            if ($httpCode >= 200 && $httpCode < 300) {
-                echo json_encode(['ok' => true, 'message' => 'Maquininha liberada com sucesso! Lembre-se de clicar em "Atualizar" na tela dela.']);
-            } else {
-                echo json_encode(['ok' => false, 'message' => 'Erro ao liberar maquininha.', 'details' => $response]);
-            }
+            (new \App\Services\MercadoPagoHttpClient())->request('PATCH','/point/integration-api/devices/'.rawurlencode($deviceId),['operating_mode'=>'STANDALONE'],$accessToken);
+            echo json_encode(['ok' => true, 'message' => 'Maquininha liberada com sucesso! Lembre-se de clicar em "Atualizar" na tela dela.']);
         } catch (\Throwable $e) {
-            echo json_encode(['ok' => false, 'message' => 'Erro interno ao liberar maquininha: ' . $e->getMessage()]);
+            http_response_code(502);
+            app_log('Falha segura ao liberar Point',['erro_tipo'=>get_class($e)]);
+            echo json_encode(['ok' => false, 'message' => 'Nao foi possivel liberar a maquininha com seguranca.']);
         }
     }
 }

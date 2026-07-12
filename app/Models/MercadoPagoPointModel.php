@@ -96,7 +96,7 @@ class MercadoPagoPointModel
             ':amount' => $amount,
             ':payment_method' => $this->paymentMethodLabel($paymentType, $installments),
             ':terminal_id' => $terminalId,
-            ':payload' => json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            ':payload' => $this->safePayloadJson($response),
         ]);
 
         $this->log($externalReference, $orderId, $this->paymentIdFromOrder($response), (string) ($response['status'] ?? 'created'), 'Order enviada para Smart Point.', $response);
@@ -181,7 +181,7 @@ class MercadoPagoPointModel
             ':amount' => $amount,
             ':payment_method' => $this->paymentMethodLabel($paymentType, $installments),
             ':terminal_id' => $terminalId,
-            ':payload' => json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            ':payload' => $this->safePayloadJson($response),
         ]);
 
         $this->log($externalReference, $orderId, $this->paymentIdFromOrder($response), (string) ($response['status'] ?? 'created'), 'Venda PDV enviada para Smart Point.', $response);
@@ -215,15 +215,11 @@ class MercadoPagoPointModel
 
         $order = $payload;
         if ($orderId !== '') {
-            try {
-                $order = $this->getOrder($orderId);
-                $status = (string) ($order['status'] ?? $status);
-                $detail = (string) ($order['status_detail'] ?? $detail);
-                $externalReference = (string) ($order['external_reference'] ?? $externalReference);
-                $paymentId = $this->paymentIdFromOrder($order) ?: $paymentId;
-            } catch (\Throwable $e) {
-                $this->log($externalReference, $orderId, $paymentId, $status, 'Nao foi possivel consultar order: ' . $e->getMessage(), $payload);
-            }
+            $order = $this->getOrder($orderId);
+            $status = (string) ($order['status'] ?? '');
+            $detail = (string) ($order['status_detail'] ?? '');
+            $externalReference = (string) ($order['external_reference'] ?? $externalReference);
+            $paymentId = $this->paymentIdFromOrder($order) ?: $paymentId;
         }
 
         $local = $externalReference !== '' ? $this->findByReference($externalReference) : null;
@@ -234,7 +230,7 @@ class MercadoPagoPointModel
         $this->updateLocalStatus($externalReference, $orderId, $paymentId, $status, $detail, $order);
         $this->log($externalReference, $orderId, $paymentId, $status, 'Webhook Point processado.', $payload);
 
-        if ($this->isApprovedOrder($order, $status)) {
+        if ($orderId !== '' && $this->isApprovedOrder($order, $status)) {
             $this->approveLocalOrderOnce($externalReference, $orderId, $paymentId, $order);
         }
 
@@ -486,12 +482,12 @@ class MercadoPagoPointModel
             return;
         }
 
-        $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $json = $this->safePayloadJson($payload);
         if ($externalReference !== '') {
             $stmt = $this->db->prepare("UPDATE mercado_pago_point_orders
                 SET mp_order_id = COALESCE(NULLIF(:order_id, ''), mp_order_id),
                     payment_id = COALESCE(:payment_id, payment_id),
-                    status = COALESCE(NULLIF(:status, ''), status),
+                    status = CASE WHEN financeiro_lancado_at IS NOT NULL THEN status ELSE COALESCE(NULLIF(:status, ''), status) END,
                     status_detail = :detail,
                     payload = :payload
                 WHERE external_reference = :ref");
@@ -508,7 +504,7 @@ class MercadoPagoPointModel
 
         $stmt = $this->db->prepare("UPDATE mercado_pago_point_orders
             SET payment_id = COALESCE(:payment_id, payment_id),
-                status = COALESCE(NULLIF(:status, ''), status),
+                status = CASE WHEN financeiro_lancado_at IS NOT NULL THEN status ELSE COALESCE(NULLIF(:status, ''), status) END,
                 status_detail = :detail,
                 payload = :payload
             WHERE mp_order_id = :order_id");
@@ -550,71 +546,19 @@ class MercadoPagoPointModel
 
     private function request(string $method, string $path, ?array $payload, string $accessToken, ?string $idempotencyKey = null): array
     {
-        $url = self::API_BASE . $path;
-        $body = $payload !== null ? json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '';
-        $headers = [
-            'Authorization: Bearer ' . $accessToken,
-            'Accept: application/json',
-            'Content-Type: application/json',
-        ];
-        if ($idempotencyKey !== null) {
-            $headers[] = 'X-Idempotency-Key: ' . $idempotencyKey;
-        }
-
-        if (function_exists('curl_init')) {
-            $ch = curl_init($url);
-            curl_setopt_array($ch, [
-                CURLOPT_CUSTOMREQUEST => $method,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_CONNECTTIMEOUT => 8,
-                CURLOPT_TIMEOUT => 22,
-                CURLOPT_HTTPHEADER => $headers,
-            ]);
-            if ($payload !== null) {
-                curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
-            }
-
-            $raw = curl_exec($ch);
-            $error = curl_error($ch);
-            $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            if ($raw === false || $raw === '') {
-                throw new \RuntimeException($error ?: 'Mercado Pago nao respondeu.');
-            }
-
-            $data = json_decode($raw, true);
-            if ($status >= 200 && $status < 300 && is_array($data)) {
-                return $data;
-            }
-
-            throw new \RuntimeException('Mercado Pago HTTP ' . $status . ': ' . $this->errorMessage($data));
-        }
-
-        $context = stream_context_create([
-            'http' => [
-                'method' => $method,
-                'timeout' => 22,
-                'header' => implode("\r\n", $headers) . "\r\n",
-                'content' => $body,
-                'ignore_errors' => true,
-            ],
-        ]);
-        $raw = @file_get_contents($url, false, $context);
-        $data = is_string($raw) ? json_decode($raw, true) : null;
-        if (is_array($data) && !isset($data['error'])) {
-            return $data;
-        }
-
-        throw new \RuntimeException($this->errorMessage($data));
+        $headers=$idempotencyKey!==null?['X-Idempotency-Key: '.$idempotencyKey]:[];
+        return (new \App\Services\MercadoPagoHttpClient())->request($method,$path,$payload,$accessToken,$headers);
     }
 
     private function log(string $reference, ?string $orderId, ?string $paymentId, string $status, string $message, array $payload = []): void
     {
-        $logPayload = $payload;
-        if ($orderId !== null) {
-            $logPayload['_mp_order_id'] = $orderId;
-        }
+        $logPayload = array_filter([
+            'external_reference'=>$reference!==''?$reference:null,
+            'order_id'=>$orderId,
+            'payment_id'=>$paymentId,
+            'status'=>$status,
+            'status_detail'=>isset($payload['status_detail'])?substr((string)$payload['status_detail'],0,100):null,
+        ],static fn($value)=>$value!==null&&$value!=='');
 
         $stmt = $this->db->prepare("INSERT INTO mercado_pago_logs (external_reference, payment_id, status, mensagem, payload)
             VALUES (:ref, :payment_id, :status, :mensagem, :payload)");
@@ -625,6 +569,18 @@ class MercadoPagoPointModel
             ':mensagem' => $message,
             ':payload' => json_encode($logPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         ]);
+    }
+
+    private function safePayloadJson(array $payload): string
+    {
+        $safe = array_filter([
+            'id' => isset($payload['id']) ? (string) $payload['id'] : null,
+            'external_reference' => isset($payload['external_reference']) ? (string) $payload['external_reference'] : null,
+            'status' => isset($payload['status']) ? (string) $payload['status'] : null,
+            'status_detail' => isset($payload['status_detail']) ? substr((string) $payload['status_detail'], 0, 100) : null,
+            'payment_id' => $this->paymentIdFromOrder($payload),
+        ], static fn($value) => $value !== null && $value !== '');
+        return json_encode($safe, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}';
     }
 
     private function buildExternalReference(int $osId, string $numeroOs): string
