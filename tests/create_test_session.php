@@ -3,6 +3,10 @@
 $sessionId = getenv('ROUTER_TEST_SESSION_ID') ?: '';
 $userId = (int) (getenv('ROUTER_TEST_USER_ID') ?: 0);
 $csrf = getenv('ROUTER_TEST_CSRF') ?: '';
+if (PHP_SAPI === 'cli' && empty($sessionId) && getenv('ROUTER_TEST_CLEANUP') !== '1') {
+    echo "create_test_session.php is a helper script, not a standalone test.\n";
+    exit(0);
+}
 if (!preg_match('/^[a-f0-9]{32}$/', $sessionId) || $userId < 1 || !preg_match('/^[a-f0-9]{64}$/', $csrf)) {
     exit(1);
 }
