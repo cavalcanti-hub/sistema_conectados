@@ -94,11 +94,6 @@ class OsModel {
         return $this->db->lastInsertId();
     }
 
-    public function updateStatus($id, $status, $obs = '') {
-        $stmt = $this->db->prepare("UPDATE ordens_servico SET status=:status WHERE id=:id");
-        $stmt->execute([':status' => normalize_os_status($status), ':id' => $id]);
-    }
-
     public function update($id, $data) {
         $sql = "UPDATE ordens_servico SET tecnico_id=:tecnico_id, diagnostico_tecnico=:diagnostico_tecnico,
                 servico_realizar=:servico_realizar, status=:status, prioridade=:prioridade,
@@ -112,42 +107,6 @@ class OsModel {
         }
         $stmt = $this->db->prepare($sql);
         return $stmt->execute($data);
-    }
-
-    public function delete(int $id): ?array {
-        $os = $this->find($id);
-        if (!$os) {
-            return null;
-        }
-
-        $aparelhoId = (int) ($os['aparelho_id'] ?? 0);
-
-        $this->db->beginTransaction();
-        try {
-            $this->db->prepare("UPDATE financeiro SET os_id = NULL WHERE os_id = :id")->execute([':id' => $id]);
-            $this->db->prepare("UPDATE compras_notas SET os_id = NULL WHERE os_id = :id")->execute([':id' => $id]);
-            $this->db->prepare("UPDATE pdv_vendas SET os_id = NULL WHERE os_id = :id")->execute([':id' => $id]);
-            $this->db->prepare("UPDATE estoque_movimentacoes SET os_id = NULL WHERE os_id = :id")->execute([':id' => $id]);
-            $this->db->prepare("DELETE FROM os_pagamentos WHERE os_id = :id")->execute([':id' => $id]);
-            $this->db->prepare("DELETE FROM os_historico WHERE os_id = :id")->execute([':id' => $id]);
-            $this->db->prepare("DELETE FROM ordens_servico WHERE id = :id")->execute([':id' => $id]);
-
-            if ($aparelhoId > 0) {
-                $stmt = $this->db->prepare("SELECT COUNT(*) FROM ordens_servico WHERE aparelho_id = :id");
-                $stmt->execute([':id' => $aparelhoId]);
-                if ((int) $stmt->fetchColumn() === 0) {
-                    $this->db->prepare("DELETE FROM aparelhos WHERE id = :id")->execute([':id' => $aparelhoId]);
-                }
-            }
-
-            $this->db->commit();
-            return $os;
-        } catch (\Throwable $e) {
-            if ($this->db->inTransaction()) {
-                $this->db->rollBack();
-            }
-            throw $e;
-        }
     }
 
     public function getHistorico($os_id) {

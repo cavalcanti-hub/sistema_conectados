@@ -306,6 +306,7 @@
     </style>
 </head>
 <body>
+<?php if (normalize_os_status((string) ($printData['status'] ?? '')) === 'Cancelado'): ?><div style="background:#fee2e2;color:#991b1b;border:2px solid #dc2626;padding:8px;text-align:center;font-size:20px;font-weight:900;">CANCELADA</div><?php endif; ?>
     <div class="toolbar">
         <button type="button" onclick="window.print()">Imprimir</button>
         <button type="button" onclick="window.close()">Fechar</button>

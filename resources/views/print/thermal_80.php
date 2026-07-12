@@ -211,6 +211,7 @@
     </style>
 </head>
 <body>
+<?php if (normalize_os_status((string) ($printData['status'] ?? '')) === 'Cancelado'): ?><div class="center" style="border:2px solid #000;padding:2mm;font-size:16px;font-weight:900;">CANCELADA</div><?php endif; ?>
     <div class="sheet">
         <header class="brand">
             <?php if (!empty($company['logo_print'])): ?>

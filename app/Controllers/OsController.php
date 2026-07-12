@@ -217,6 +217,9 @@ class OsController extends Controller
     {
         $id = $_GET['id'] ?? 0;
         $os = $this->model->find($id);
+        if (!$os || normalize_os_status((string) ($os['status'] ?? '')) === 'Cancelado') {
+            $this->redirect(route_url('os/viewDetail', ['id' => (int) $id, 'error' => 'cancelled_read_only']));
+        }
         $tecnicos = $this->tecnicoModel->getAtivos();
         $this->view('os/edit', [
             'title' => 'Editar OS - Conectados',
@@ -237,6 +240,9 @@ class OsController extends Controller
         $osAtual = $this->model->find($id);
         if (!$osAtual) {
             $this->redirect(route_url('os'));
+        }
+        if (normalize_os_status((string) ($osAtual['status'] ?? '')) === 'Cancelado') {
+            $this->redirect(route_url('os/viewDetail', ['id' => (int) $id, 'error' => 'cancelled_read_only']));
         }
 
         $db = \App\Config\Database::getInstance();
@@ -263,6 +269,9 @@ class OsController extends Controller
             $novoStatus = normalize_os_status($_POST['status'] ?? $osAtual['status']);
             if (!in_array($novoStatus, os_status_list(), true)) {
                 $novoStatus = normalize_os_status($osAtual['status']);
+            }
+            if ($novoStatus === 'Cancelado') {
+                throw new \App\Services\OsCancellationException('CANCELLATION_ROUTE_REQUIRED', 'Use a acao Cancelar OS e informe o motivo.', 409);
             }
 
             $payload = [
@@ -349,33 +358,25 @@ class OsController extends Controller
         exit;
     }
 
-    public function delete()
+    public function cancel()
     {
-        if (current_user_profile() !== 'Administrador') {
-            http_response_code(403);
-            echo 'Apenas administradores podem excluir ordens de servico.';
-            exit;
-        }
-
         $id = (int) ($_POST['id'] ?? 0);
-        if ($id <= 0) {
-            $this->redirect(route_url('os'));
-        }
-
         try {
-            $deleted = $this->model->delete($id);
-            if ($deleted) {
-                $this->deleteOsPhotos($deleted['fotos'] ?? null);
-                $this->deleteOsPhotos($deleted['fotos_saida'] ?? null);
-            }
-            (new \App\Models\AuditModel())->record('excluir', 'os', $id, 'OS excluida: #' . ($deleted['numero_os'] ?? $id), [
-                'cliente' => $deleted['cliente_nome'] ?? '',
-                'status' => $deleted['status'] ?? '',
+            $result = (new \App\Services\OsCancellationService())->cancel(
+                $id,
+                (int) current_user_id(),
+                (string) ($_POST['motivo'] ?? '')
+            );
+            (new \App\Models\AuditModel())->record('cancelar', 'os', $id, 'OS cancelada logicamente: #' . ($result['numero_os'] ?? $id), [
+                'status_anterior' => $result['previous_status'] ?? 'Cancelado',
+                'resultado' => $result['status'] ?? 'cancelled',
             ]);
-            $this->redirect(route_url('os', ['deleted' => 1]));
+            $this->redirect(route_url('os/viewDetail', ['id' => $id, 'cancelled' => 1]));
+        } catch (\App\Services\OsCancellationException $e) {
+            $this->redirect(route_url('os/viewDetail', ['id' => max(0, $id), 'cancel_error' => $e->domainCode]));
         } catch (\Throwable $e) {
-            app_log('Falha ao excluir OS', ['os_id' => $id, 'erro' => $e->getMessage()]);
-            $this->redirect(route_url('os/viewDetail', ['id' => $id, 'error' => 'delete_failed']));
+            app_log('Falha ao cancelar OS', ['os_id' => $id, 'erro_tipo' => get_class($e)]);
+            $this->redirect(route_url('os/viewDetail', ['id' => max(0, $id), 'cancel_error' => 'CANCELLATION_FAILED']));
         }
     }
 
@@ -389,6 +390,9 @@ class OsController extends Controller
         $os = $this->model->find($id);
         if (!$os) {
             $this->redirect(route_url('os'));
+        }
+        if (normalize_os_status((string) ($os['status'] ?? '')) === 'Cancelado') {
+            $this->redirect(route_url('os/viewDetail', ['id' => $id, 'point_error' => 'OS_CANCELADA']));
         }
 
         $totalPago = $this->model->totalPagamentos($id);
@@ -437,31 +441,6 @@ class OsController extends Controller
             app_log('Falha transacional ao registrar pagamento manual', ['os_id' => $id, 'erro_tipo' => get_class($e)]);
             if (is_ajax_request()) { http_response_code(500); header('Content-Type: application/json; charset=utf-8'); echo json_encode(['success' => false, 'message' => 'Nao foi possivel registrar o pagamento.', 'code' => 'PAYMENT_TRANSACTION_FAILED']); return; }
             $this->redirect(route_url('os/viewDetail', ['id' => max(0, $id), 'payment_error' => 'PAYMENT_TRANSACTION_FAILED']));
-        }
-    }
-
-    private function deleteOsPhotos($photos): void
-    {
-        if (empty($photos)) {
-            return;
-        }
-
-        $decoded = is_array($photos) ? $photos : json_decode((string) $photos, true);
-        if (!is_array($decoded)) {
-            return;
-        }
-
-        $dir = $this->getOsUploadDir();
-        foreach ($decoded as $photo) {
-            $name = basename(str_replace('\\', '/', (string) $photo));
-            if ($name === '') {
-                continue;
-            }
-
-            $path = $dir . DIRECTORY_SEPARATOR . $name;
-            if (is_file($path)) {
-                @unlink($path);
-            }
         }
     }
 
@@ -703,6 +682,13 @@ class OsController extends Controller
         $id = (int) ($_GET['id'] ?? 0);
         if ($id <= 0) {
             echo json_encode(['ok' => false, 'status' => 'error']);
+            return;
+        }
+
+        $os = $this->model->find($id);
+        if (!$os || normalize_os_status((string) ($os['status'] ?? '')) === 'Cancelado') {
+            http_response_code(409);
+            echo json_encode(['ok' => false, 'status' => 'cancelled']);
             return;
         }
 

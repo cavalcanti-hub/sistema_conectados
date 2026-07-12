@@ -66,7 +66,7 @@ $add('os/store', ['POST'], OsController::class, 'store', ['profiles' => $service
 $add('os/edit', ['GET'], OsController::class, 'edit', ['profiles' => $service]);
 $add('os/update', ['POST'], OsController::class, 'update', ['profiles' => $service]);
 $add('os/storeModelo', ['POST'], OsController::class, 'storeModelo', ['profiles' => $service, 'response' => 'json']);
-$add('os/delete', ['POST'], OsController::class, 'delete', ['profiles' => $admin]);
+$add('os/cancel', ['POST'], OsController::class, 'cancel', ['profiles' => $admin]);
 $add('os/receberPoint', ['POST'], OsController::class, 'receberPoint', ['profiles' => $frontDesk]);
 $add('os/registrarPagamento', ['POST'], OsController::class, 'registrarPagamento', ['profiles' => ['Administrador', 'Financeiro', 'Atendente']]);
 $add('os/viewDetail', ['GET'], OsController::class, 'viewDetail', ['profiles' => $service]);
