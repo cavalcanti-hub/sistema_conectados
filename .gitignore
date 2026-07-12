@@ -34,6 +34,7 @@ Thumbs.db
 
 .sixth/
 build/
+release/
 production_backups/
 backups/
 storage/backups/
