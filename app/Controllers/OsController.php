@@ -111,12 +111,15 @@ class OsController extends Controller
     {
         $clientes = []; // loaded via AJAX
         $tecnicos = $this->tecnicoModel->getAtivos();
+        $operationId = bin2hex(random_bytes(16));
         $this->view('os/create', [
             'title' => 'Nova OS - Conectados',
             'page_title' => 'Abrir Nova OS',
             'clientes' => $clientes,
             'tecnicos' => $tecnicos,
             'deviceBrandModels' => $this->deviceBrandModels(),
+            'paymentOperationId' => $operationId,
+            'paymentNonce' => issue_os_operation_nonce('os_create_payment', $operationId),
         ]);
     }
 
@@ -167,12 +170,29 @@ class OsController extends Controller
                 ':prioridade' => $_POST['prioridade'],
                 ':status' => 'Recebido',
                 ':prazo_estimado' => $_POST['prazo_estimado'] ?: null,
-                ':valor_mao_obra' => (float) ($_POST['valor_mao_obra'] ?? 0),
-                ':valor_pecas' => (float) ($_POST['valor_pecas'] ?? 0),
+                ':valor_mao_obra' => $this->moneyInputToDecimal($_POST['valor_mao_obra'] ?? ''),
+                ':valor_pecas' => $this->moneyInputToDecimal($_POST['valor_pecas'] ?? ''),
                 ':fotos' => !empty($fotosNomes) ? json_encode($fotosNomes) : null
             ]);
 
             $this->model->addHistorico($osId, current_user_id(), '', 'Recebido', 'OS aberta no sistema');
+            $initialPayment = trim((string) ($_POST['pagamento_inicial_valor'] ?? ''));
+            if ($initialPayment !== '') {
+                $operationId = trim((string) ($_POST['os_create_operation_id'] ?? ''));
+                $nonce = trim((string) ($_POST['os_create_payment_nonce'] ?? ''));
+                if (!validate_os_operation_nonce($nonce, 'os_create_payment', $operationId)) {
+                    throw new \App\Services\PaymentException('PAYMENT_DUPLICATE', 'Solicitacao duplicada ou expirada.', 409);
+                }
+                $amountCents = \App\Services\ManualOsPaymentService::parseMoneyToCents($initialPayment);
+                (new \App\Services\ManualOsPaymentService($db))->register(
+                    (int) $osId,
+                    $amountCents,
+                    (string) ($_POST['pagamento_inicial_forma'] ?? ''),
+                    (string) ($_POST['pagamento_inicial_observacao'] ?? 'Pagamento inicial'),
+                    (int) current_user_id()
+                );
+                consume_os_operation_nonce($nonce);
+            }
             $db->commit();
             (new \App\Models\AuditModel())->record('criar', 'os', (int) $osId, 'OS criada no sistema', [
                 'cliente_id' => $_POST['cliente_id'] ?? null,
@@ -206,7 +226,8 @@ class OsController extends Controller
             'totalPago' => $this->model->totalPagamentos($id),
             'tecnicos' => $tecnicos,
             'deviceBrandModels' => $this->deviceBrandModels(),
-            'status_list' => os_status_list()
+            'status_list' => os_status_list(),
+            'paymentNonce' => issue_os_payment_nonce((int) $id),
         ]);
     }
 
@@ -250,35 +271,54 @@ class OsController extends Controller
                 ':servico_realizar' => $_POST['servico_realizar'],
                 ':status' => $novoStatus,
                 ':prioridade' => $_POST['prioridade'],
-                ':valor_mao_obra' => (float) $_POST['valor_mao_obra'],
-                ':valor_pecas' => (float) $_POST['valor_pecas'],
-                ':desconto' => (float) ($_POST['desconto'] ?? 0),
+                ':valor_mao_obra' => $this->moneyInputToDecimal($_POST['valor_mao_obra'] ?? ''),
+                ':valor_pecas' => $this->moneyInputToDecimal($_POST['valor_pecas'] ?? ''),
+                ':desconto' => $this->moneyInputToDecimal($_POST['desconto'] ?? ''),
                 ':prazo_estimado' => $_POST['prazo_estimado'] ?: null,
                 ':forma_pagamento' => $_POST['forma_pagamento'],
-                ':situacao_pagamento' => $_POST['situacao_pagamento'],
+                ':situacao_pagamento' => 'Pendente',
                 ':fotos' => !empty($fotosNomes) ? json_encode($fotosNomes) : null,
                 ':fotos_saida' => !empty($fotosSaidaNomes) ? json_encode($fotosSaidaNomes) : null
             ];
 
-            $totalOs = max(0, $payload[':valor_mao_obra'] + $payload[':valor_pecas'] - $payload[':desconto']);
-            $totalPago = $this->model->totalPagamentos($id);
-            $pagamentoNovo = $this->registerOsPaymentFromPost((int) $id, (string) $osAtual['numero_os'], $totalOs);
-            $totalPago += $pagamentoNovo;
-            if ($totalOs > 0 && $totalPago > 0) {
-                $payload[':situacao_pagamento'] = $totalPago + 0.01 >= $totalOs ? 'Pago' : 'Parcial';
+            $totalOsCents = max(0, $this->decimalToCents($payload[':valor_mao_obra']) + $this->decimalToCents($payload[':valor_pecas']) - $this->decimalToCents($payload[':desconto']));
+            $totalPagoCents = $this->totalPaymentsCents($db, (int) $id);
+            if ($totalPagoCents > $totalOsCents) {
+                throw new \App\Services\PaymentException(
+                    'TOTAL_BELOW_PAID',
+                    'O valor total da OS nao pode ser menor que o total ja pago.',
+                    409
+                );
             }
+            $payload[':situacao_pagamento'] = $this->financialStatusFor($totalOsCents, $totalPagoCents);
 
             $this->model->update($id, $payload);
+            $paymentValue = trim((string) ($_POST['pagamento_valor'] ?? ''));
+            if ($paymentValue !== '') {
+                $nonce = trim((string) ($_POST['payment_nonce'] ?? ''));
+                if (!validate_os_payment_nonce($nonce, (int) $id)) {
+                    throw new \App\Services\PaymentException('PAYMENT_DUPLICATE', 'Solicitacao duplicada ou expirada.', 409);
+                }
+                $amountCents = \App\Services\ManualOsPaymentService::parseMoneyToCents($paymentValue);
+                (new \App\Services\ManualOsPaymentService($db))->register(
+                    (int) $id,
+                    $amountCents,
+                    (string) ($_POST['pagamento_forma'] ?? ''),
+                    (string) ($_POST['pagamento_observacao'] ?? ''),
+                    (int) current_user_id()
+                );
+                consume_os_payment_nonce($nonce);
+            }
             if (normalize_os_status($osAtual['status']) !== $novoStatus) {
                 $this->model->addHistorico($id, current_user_id(), normalize_os_status($osAtual['status']), $novoStatus, $_POST['obs_interna'] ?? '');
             }
 
-            $this->syncFinanceiroFromOs((int) $id, $payload, (string) $osAtual['numero_os'], $totalPago);
+            $this->syncFinanceiroFromOs((int) $id, $payload, (string) $osAtual['numero_os'], $this->model->totalPagamentos($id));
             $db->commit();
             (new \App\Models\AuditModel())->record('editar', 'os', (int) $id, 'OS editada: #' . (string) $osAtual['numero_os'], [
                 'status_anterior' => normalize_os_status($osAtual['status']),
                 'status_novo' => $novoStatus,
-                'valor_total' => $totalOs,
+                'valor_total' => number_format($totalOsCents / 100, 2, '.', ''),
             ]);
         } catch (\Throwable $e) {
             if ($db->inTransaction()) {
@@ -425,43 +465,6 @@ class OsController extends Controller
         }
     }
 
-    private function registerOsPaymentFromPost(int $osId, string $numeroOs, float $totalOs): float
-    {
-        $valor = normalize_decimal_input($_POST['pagamento_valor'] ?? 0);
-        if ($osId <= 0 || $valor <= 0) {
-            return 0.0;
-        }
-
-        $forma = trim((string) ($_POST['pagamento_forma'] ?? ($_POST['forma_pagamento'] ?? '')));
-        $data = trim((string) ($_POST['pagamento_data'] ?? '')) ?: date('Y-m-d');
-        $observacao = trim((string) ($_POST['pagamento_observacao'] ?? ''));
-        $usuarioId = current_user_id();
-
-        $this->model->addPagamento([
-            ':os_id' => $osId,
-            ':valor' => $valor,
-            ':forma_pagamento' => $forma,
-            ':data_pagamento' => $data,
-            ':observacao' => $observacao,
-            ':usuario_id' => $usuarioId,
-        ]);
-
-        $financeiro = new \App\Models\FinanceiroModel();
-        $receitaId = (int) $financeiro->create([
-            ':tipo' => 'Receita',
-            ':categoria' => 'Pagamento OS',
-            ':descricao' => 'Pagamento OS #' . $numeroOs . ($totalOs > 0 && $valor < $totalOs ? ' (parcial)' : ''),
-            ':valor' => $valor,
-            ':os_id' => $osId,
-            ':usuario_id' => $usuarioId,
-            ':data_pagamento' => $data,
-            ':forma_pagamento' => $forma,
-        ]);
-        $financeiro->syncCardFeeForRevenue($receitaId);
-
-        return $valor;
-    }
-
     private function syncFinanceiroFromOs(int $osId, array $payload, string $numeroOs, float $totalPago = 0.0): void
     {
         $situacao = (string) ($payload[':situacao_pagamento'] ?? '');
@@ -469,35 +472,10 @@ class OsController extends Controller
             return;
         }
 
-        $valorMaoObra = (float) ($payload[':valor_mao_obra'] ?? 0);
-        $valorPecas = (float) ($payload[':valor_pecas'] ?? 0);
-        $desconto = (float) ($payload[':desconto'] ?? 0);
-        $valorTotal = max(0, $valorMaoObra + $valorPecas - $desconto);
+        $valorPecas = $this->decimalToCents((string) ($payload[':valor_pecas'] ?? '0.00')) / 100;
         $financeiro = new \App\Models\FinanceiroModel();
         $usuarioId = current_user_id();
         $formaPagamento = (string) ($payload[':forma_pagamento'] ?? '');
-
-        if ($valorTotal > 0 && $situacao === 'Pago' && $totalPago <= 0) {
-            $this->model->addPagamento([
-                ':os_id' => $osId,
-                ':valor' => $valorTotal,
-                ':forma_pagamento' => $formaPagamento,
-                ':data_pagamento' => date('Y-m-d'),
-                ':observacao' => 'Baixa automatica do valor total',
-                ':usuario_id' => $usuarioId,
-            ]);
-            $receitaId = $financeiro->syncAutoEntryForOs($osId, [
-                ':tipo' => 'Receita',
-                ':categoria' => 'Pagamento OS',
-                ':descricao' => 'Pagamento OS #' . $numeroOs,
-                ':valor' => $valorTotal,
-                ':os_id' => $osId,
-                ':usuario_id' => $usuarioId,
-                ':data_pagamento' => date('Y-m-d'),
-                ':forma_pagamento' => $formaPagamento,
-            ]);
-            $financeiro->syncCardFeeForRevenue($receitaId);
-        }
 
         if ($valorPecas > 0 && ($totalPago > 0 || $situacao === 'Pago')) {
             $financeiro->syncAutoEntryForOs($osId, [
@@ -511,6 +489,59 @@ class OsController extends Controller
                 ':forma_pagamento' => $formaPagamento,
             ]);
         }
+    }
+
+    private function moneyInputToDecimal($input): string
+    {
+        $value = trim((string) $input);
+        if ($value === '') {
+            return '0.00';
+        }
+        if (preg_match('/[eE]|[^0-9R$.,\s-]/u', $value)) {
+            throw new \App\Services\PaymentException('INVALID_MONEY_VALUE', 'Informe valores financeiros validos.');
+        }
+        $value = preg_replace('/^R\$\s*/u', '', $value);
+        if (!preg_match('/^-?(?:[0-9]{1,3}(?:\.[0-9]{3})*|[0-9]+)(?:[,.][0-9]{1,2})?$/', $value)) {
+            throw new \App\Services\PaymentException('INVALID_MONEY_VALUE', 'Informe valores financeiros validos.');
+        }
+        $negative = str_starts_with($value, '-');
+        $value = ltrim($value, '-');
+        if (str_contains($value, ',')) {
+            $value = str_replace(['.', ','], ['', '.'], $value);
+        }
+        [$whole, $decimal] = array_pad(explode('.', $value, 2), 2, '');
+        $cents = ((int) $whole * 100) + (int) str_pad($decimal, 2, '0');
+        if ($negative) {
+            $cents *= -1;
+        }
+        return number_format($cents / 100, 2, '.', '');
+    }
+
+    private function decimalToCents(string $decimal): int
+    {
+        return \App\Services\ManualOsPaymentService::decimalToCents($decimal);
+    }
+
+    private function totalPaymentsCents(\PDO $db, int $osId): int
+    {
+        $stmt = $db->prepare('SELECT valor FROM os_pagamentos WHERE os_id = :id');
+        $stmt->execute([':id' => $osId]);
+        $total = 0;
+        foreach ($stmt->fetchAll(\PDO::FETCH_COLUMN) as $value) {
+            $total += $this->decimalToCents((string) $value);
+        }
+        return $total;
+    }
+
+    private function financialStatusFor(int $totalCents, int $paidCents): string
+    {
+        if ($paidCents <= 0) {
+            return 'Pendente';
+        }
+        if ($totalCents > 0 && $paidCents >= $totalCents) {
+            return 'Pago';
+        }
+        return 'Parcial';
     }
 
     private function uniquePrintLines(string $text): array

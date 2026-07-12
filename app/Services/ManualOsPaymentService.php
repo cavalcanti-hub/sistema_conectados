@@ -1,16 +1,7 @@
 <?php
 namespace App\Services;
 
-class PaymentException extends \RuntimeException
-{
-    public function __construct(string $code, string $message, public int $httpStatus = 422)
-    {
-        parent::__construct($message);
-        $this->code = 0;
-        $this->domainCode = $code;
-    }
-    public string $domainCode;
-}
+require_once __DIR__ . '/PaymentException.php';
 
 class ManualOsPaymentService
 {
@@ -47,6 +38,7 @@ class ManualOsPaymentService
     {
         if ($osId < 1) throw new PaymentException('INVALID_ORDER_ID', 'Ordem de servico invalida.', 400);
         if ($userId < 1) throw new PaymentException('UNAUTHORIZED', 'Usuario nao autenticado.', 401);
+        if ($amountCents <= 0) throw new PaymentException('INVALID_PAYMENT_VALUE', 'Informe um valor valido.');
         $method = trim($method);
         if (!in_array($method, self::METHODS, true)) throw new PaymentException('PAYMENT_METHOD_INVALID', 'Forma de pagamento manual invalida.');
         $note = trim($note);

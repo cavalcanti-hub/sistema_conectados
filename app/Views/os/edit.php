@@ -19,6 +19,7 @@ $saldoRestante = max(0, $valorTotalOs - $totalPago);
             <form action="<?= e(route_url('os/update')) ?>" method="POST" enctype="multipart/form-data">
                 <?= csrf_field() ?>
                 <input type="hidden" name="id" value="<?= (int) $os['id'] ?>">
+                <input type="hidden" name="payment_nonce" value="<?= e($paymentNonce ?? '') ?>">
             
             <div style="background:var(--bg-main);padding:1.25rem;border-radius:12px;margin-bottom:1.5rem;border:1px solid var(--border);">
                 <h4 class="brand-font" style="margin-bottom:1rem;color:var(--secondary);display:flex;align-items:center;gap:8px;">
@@ -103,7 +104,7 @@ $saldoRestante = max(0, $valorTotalOs - $totalPago);
                 <div class="form-group"><label class="form-label">Peças (R$)</label><input type="number" step="0.01" name="valor_pecas" class="form-control" value="<?= e($os['valor_pecas'] ?? 0) ?>"></div>
                 <div class="form-group"><label class="form-label">Desconto (R$)</label><input type="number" step="0.01" name="desconto" class="form-control" value="<?= e($os['desconto'] ?? 0) ?>"></div>
                 <div class="form-group"><label class="form-label">Prazo de Entrega</label><input type="date" name="prazo_estimado" class="form-control" value="<?= e($os['prazo_estimado'] ?? '') ?>"></div>
-                <div class="form-group"><label class="form-label">Forma de Pagamento</label>
+                <div class="form-group"><label class="form-label">Forma de Pagamento Preferencial</label>
                     <select name="forma_pagamento" class="form-control">
                         <?php foreach(['Dinheiro','Pix','Cartao de Debito','QR Mercado Pago','Saldo Mercado Pago','Cartao de Credito na hora','Cartao de Credito 14 dias','Cartao de Credito 30 dias','Transferencia'] as $f): ?><option value="<?= e($f) ?>" <?= ($os['forma_pagamento']??'')===$f?'selected':'' ?>><?= e($f) ?></option><?php endforeach; ?>
                         <?php for ($parcelas = 2; $parcelas <= 12; $parcelas++): ?>
@@ -113,9 +114,7 @@ $saldoRestante = max(0, $valorTotalOs - $totalPago);
                     </select>
                 </div>
                 <div class="form-group"><label class="form-label">Situação do Pagamento</label>
-                    <select name="situacao_pagamento" class="form-control">
-                        <?php foreach(['Pendente','Parcial','Pago'] as $sp): ?><option value="<?= e($sp) ?>" <?= ($os['situacao_pagamento']??'Pendente')===$sp?'selected':'' ?>><?= e($sp) ?></option><?php endforeach; ?>
-                    </select>
+                    <input type="text" class="form-control" value="<?= e($os['situacao_pagamento'] ?? 'Pendente') ?>" readonly>
                 </div>
                 <div style="grid-column:span 2;background:var(--bg-main);border:1px solid var(--border);border-radius:12px;padding:1rem;">
                     <h4 class="brand-font" style="margin-bottom:.85rem;color:var(--secondary);display:flex;align-items:center;gap:8px;">
@@ -152,16 +151,13 @@ $saldoRestante = max(0, $valorTotalOs - $totalPago);
                     </div>
                     <?php endif; ?>
                     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.85rem;">
-                        <div class="form-group"><label class="form-label">Adicionar pagamento (R$)</label><input type="number" step="0.01" min="0" name="pagamento_valor" class="form-control" placeholder="0,00"></div>
+                        <div class="form-group"><label class="form-label">Nova parcela (R$)</label><input type="text" inputmode="decimal" name="pagamento_valor" class="form-control" placeholder="0,00"></div>
                         <div class="form-group"><label class="form-label">Forma</label>
                             <select name="pagamento_forma" class="form-control">
-                                <?php foreach(['Dinheiro','Pix','Cartao de Debito','QR Mercado Pago','Saldo Mercado Pago','Cartao de Credito na hora','Cartao de Credito 14 dias','Cartao de Credito 30 dias','Transferencia'] as $f): ?><option value="<?= e($f) ?>"><?= e($f) ?></option><?php endforeach; ?>
-                                <?php for ($parcelas = 2; $parcelas <= 12; $parcelas++): ?>
-                                    <option value="<?= e('Cartao de Credito ' . $parcelas . 'x') ?>"><?= e('Cartao de Credito ' . $parcelas . 'x') ?></option>
-                                <?php endfor; ?>
+                                <option value="Pix">Pix</option>
+                                <option value="Dinheiro">Dinheiro</option>
                             </select>
                         </div>
-                        <div class="form-group"><label class="form-label">Data</label><input type="date" name="pagamento_data" class="form-control" value="<?= date('Y-m-d') ?>"></div>
                         <div class="form-group" style="grid-column:span 3;"><label class="form-label">Observacao do pagamento</label><input type="text" name="pagamento_observacao" class="form-control" placeholder="Ex: entrada, segunda parcela, restante pago no Pix"></div>
                     </div>
                 </div>
@@ -199,5 +195,19 @@ $saldoRestante = max(0, $valorTotalOs - $totalPago);
         </div>
     </div>
 </form>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.querySelector('form[action="<?= e(route_url('os/update')) ?>"]');
+    if (!form) {
+        return;
+    }
+    form.addEventListener('submit', () => {
+        form.querySelectorAll('button[type="submit"]').forEach((button) => {
+            button.disabled = true;
+        });
+    });
+});
+</script>
 
 <?php require_once dirname(__DIR__) . '/layout/footer.php'; ?>

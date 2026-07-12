@@ -46,13 +46,50 @@ if (!function_exists('validate_os_payment_nonce')) {
     function validate_os_payment_nonce(string $token, int $osId): bool
     {
         $entry = $_SESSION['_os_payment_nonces'][$token] ?? null;
-        return is_array($entry) && hash_equals((string) array_search($entry, $_SESSION['_os_payment_nonces'], true), $token)
-            && (int) $entry['os_id'] === $osId && (int) $entry['user_id'] === (int) current_user_id() && (int) $entry['expires'] >= time();
+        return is_array($entry)
+            && (int) $entry['os_id'] === $osId
+            && (int) $entry['user_id'] === (int) current_user_id()
+            && (int) $entry['expires'] >= time();
     }
 }
 
 if (!function_exists('consume_os_payment_nonce')) {
     function consume_os_payment_nonce(string $token): void { unset($_SESSION['_os_payment_nonces'][$token]); }
+}
+
+if (!function_exists('issue_os_operation_nonce')) {
+    function issue_os_operation_nonce(string $purpose, string $operationId): string
+    {
+        $purpose = preg_replace('/[^a-z0-9_.:-]/i', '', $purpose) ?: 'os';
+        $operationId = preg_replace('/[^a-z0-9_.:-]/i', '', $operationId) ?: bin2hex(random_bytes(8));
+        $token = bin2hex(random_bytes(32));
+        $_SESSION['_os_operation_nonces'][$token] = [
+            'purpose' => $purpose,
+            'operation_id' => $operationId,
+            'user_id' => current_user_id(),
+            'expires' => time() + 900,
+        ];
+        if (count($_SESSION['_os_operation_nonces']) > 12) {
+            $_SESSION['_os_operation_nonces'] = array_slice($_SESSION['_os_operation_nonces'], -12, null, true);
+        }
+        return $token;
+    }
+}
+
+if (!function_exists('validate_os_operation_nonce')) {
+    function validate_os_operation_nonce(string $token, string $purpose, string $operationId): bool
+    {
+        $entry = $_SESSION['_os_operation_nonces'][$token] ?? null;
+        return is_array($entry)
+            && hash_equals((string) $entry['purpose'], $purpose)
+            && hash_equals((string) $entry['operation_id'], $operationId)
+            && (int) $entry['user_id'] === (int) current_user_id()
+            && (int) $entry['expires'] >= time();
+    }
+}
+
+if (!function_exists('consume_os_operation_nonce')) {
+    function consume_os_operation_nonce(string $token): void { unset($_SESSION['_os_operation_nonces'][$token]); }
 }
 
 if (!function_exists('e')) {

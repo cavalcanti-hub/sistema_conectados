@@ -598,7 +598,6 @@ $pointSettings = $pointSettings ?? [];
                 <input type="hidden" name="desconto" value="<?= e($os['desconto'] ?? 0) ?>">
                 <input type="hidden" name="prazo_estimado" value="<?= e($os['prazo_estimado'] ?? '') ?>">
                 <input type="hidden" name="forma_pagamento" value="<?= e($os['forma_pagamento'] ?? '') ?>">
-                <input type="hidden" name="situacao_pagamento" value="<?= e($os['situacao_pagamento'] ?? 'Pendente') ?>">
                 <select name="status" class="form-control" style="margin-bottom:.75rem;">
                     <?php foreach($status_list as $s): ?>
                         <?php $statusOptionLabel = trim((string) @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', (string) $s)) ?: (string) $s; ?>

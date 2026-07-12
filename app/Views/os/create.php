@@ -190,6 +190,8 @@
 
 <form action="<?= e(route_url('os/store')) ?>" method="POST" id="form-nova-os" enctype="multipart/form-data">
     <?= csrf_field() ?>
+    <input type="hidden" name="os_create_operation_id" value="<?= e($paymentOperationId ?? '') ?>">
+    <input type="hidden" name="os_create_payment_nonce" value="<?= e($paymentNonce ?? '') ?>">
     <div class="os-create-layout">
         <div class="card os-side-card">
             <div class="os-settings-bar">
@@ -356,6 +358,28 @@
                         <input type="date" name="prazo_estimado" class="form-control" min="<?= date('Y-m-d') ?>">
                     </div>
                 </div>
+                <div style="margin-top:1rem;border:1px solid var(--border);border-radius:8px;padding:1rem;background:var(--bg-main);">
+                    <h4 class="brand-font" style="margin-bottom:.85rem;color:var(--secondary);display:flex;align-items:center;gap:8px;">
+                        <i data-lucide="wallet" style="width:18px;"></i> Pagamento inicial opcional
+                    </h4>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                        <div class="form-group">
+                            <label class="form-label">Nova parcela (R$)</label>
+                            <input type="text" name="pagamento_inicial_valor" class="form-control" inputmode="decimal" placeholder="0,00">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Forma</label>
+                            <select name="pagamento_inicial_forma" class="form-control">
+                                <option value="Pix">Pix</option>
+                                <option value="Dinheiro">Dinheiro</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="grid-column:span 2;">
+                            <label class="form-label">Observacao</label>
+                            <input type="text" name="pagamento_inicial_observacao" class="form-control" maxlength="255" placeholder="Ex: entrada paga na abertura">
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -415,6 +439,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (window.lucide) {
         window.lucide.createIcons();
+    }
+
+    const form = document.getElementById('form-nova-os');
+    if (form) {
+        form.addEventListener('submit', () => {
+            form.querySelectorAll('button[type="submit"]').forEach((button) => {
+                button.disabled = true;
+            });
+        });
     }
 });
 </script>
