@@ -49,7 +49,7 @@ return array (
       ),
       'senha_padrao' => 
       array (
-        'type' => 'varchar(100)',
+        'type' => 'varchar(512)',
         'nullable' => 'YES',
         'default' => 'NULL',
       ),

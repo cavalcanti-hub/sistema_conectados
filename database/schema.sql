@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS aparelhos (
     imei VARCHAR(50),
     numero_serie VARCHAR(50),
     cor VARCHAR(30),
-    senha_padrao VARCHAR(100),
+    senha_padrao VARCHAR(512),
     estado_fisico TEXT,
     acessorios TEXT,
     observacoes TEXT,
