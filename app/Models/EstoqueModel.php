@@ -500,8 +500,14 @@ class EstoqueModel
             throw new \RuntimeException('Produto ou quantidade invalida para baixa de estoque.');
         }
 
-        $stmt = $this->db->prepare("UPDATE estoque SET quantidade = quantidade - :qtd WHERE id = :id AND quantidade >= :qtd");
-        $stmt->execute([':qtd' => $qtd, ':id' => $id]);
+        $stmt = $this->db->prepare("UPDATE estoque
+            SET quantidade = quantidade - :qtd_decremento
+            WHERE id = :id AND quantidade >= :qtd_minimo");
+        $stmt->execute([
+            ':qtd_decremento' => $qtd,
+            ':qtd_minimo' => $qtd,
+            ':id' => $id,
+        ]);
         if ($stmt->rowCount() === 0) {
             throw new \RuntimeException('Estoque insuficiente para concluir a operacao.');
         }

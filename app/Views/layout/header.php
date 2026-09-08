@@ -9,13 +9,14 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Conectados">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2300349a'/%3E%3Cpath d='M42 19a18 18 0 1 0 0 26' fill='none' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3C/svg%3E">
     <link rel="icon" type="image/png" sizes="32x32" href="<?= app_url('favicon.png') ?>">
     <link rel="icon" type="image/png" sizes="16x16" href="<?= app_url('assets/icons/icon-16x16.png') ?>">
     <link rel="apple-touch-icon" href="<?= app_url('assets/icons/icon-180x180.png') ?>">
     <link rel="manifest" href="<?= app_url('manifest.webmanifest') ?>?v=20260704-pwa-install-fix">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= app_url('assets/css/index.css') ?>?v=20260703-quick-actions-buttons">
+    <link rel="stylesheet" href="<?= app_url('assets/css/index.css') ?>?v=<?= file_exists(dirname(dirname(__DIR__)) . '/public/assets/css/index.css') ? filemtime(dirname(dirname(__DIR__)) . '/public/assets/css/index.css') : time() ?>">
     <?php foreach (($extraStyles ?? []) as $styleHref): ?>
     <link rel="stylesheet" href="<?= e($styleHref) ?>">
     <?php endforeach; ?>
@@ -101,22 +102,30 @@ $systemUserInitial = strtoupper(substr($systemUserName, 0, 1) ?: 'U');
             <?php endforeach; ?>
         </nav>
 
-        <details class="system-dock-user">
-            <summary>
-                <span class="system-dock-icon system-user-avatar"><?= e($systemUserInitial) ?></span>
-                <span class="system-dock-label">Conta</span>
-            </summary>
-            <div class="system-nav-menu-panel system-user-panel">
-                <div>
-                    <strong><?= e($systemUserName) ?></strong>
-                    <small><?= e($systemUserRole) ?></small>
+        <div class="system-topnav-right">
+            <button type="button" class="system-search-btn" onclick="openCommandPalette()" title="Busca Global (Ctrl + K)">
+                <i data-lucide="search" style="width:16px;height:16px;"></i>
+                <span class="search-text">Buscar</span>
+                <kbd class="search-kbd">Ctrl K</kbd>
+            </button>
+
+            <details class="system-dock-user">
+                <summary>
+                    <span class="system-dock-icon system-user-avatar"><?= e($systemUserInitial) ?></span>
+                    <span class="system-dock-label">Conta</span>
+                </summary>
+                <div class="system-nav-menu-panel system-user-panel">
+                    <div>
+                        <strong><?= e($systemUserName) ?></strong>
+                        <small><?= e($systemUserRole) ?></small>
+                    </div>
+                    <form method="POST" action="<?= e(route_url('logout')) ?>" class="logout-form">
+                        <?= csrf_field() ?>
+                        <button type="submit" style="border:0;background:none;color:inherit;font:inherit;padding:0;cursor:pointer;display:flex;align-items:center;gap:.5rem;"><i data-lucide="log-out"></i> Sair</button>
+                    </form>
                 </div>
-                <form method="POST" action="<?= e(route_url('logout')) ?>" class="logout-form">
-                    <?= csrf_field() ?>
-                    <button type="submit" style="border:0;background:none;color:inherit;font:inherit;padding:0;cursor:pointer;display:flex;align-items:center;gap:.5rem;"><i data-lucide="log-out"></i> Sair</button>
-                </form>
-            </div>
-        </details>
+            </details>
+        </div>
     </header>
 
     <div class="sidebar-overlay" id="overlay" onclick="document.body.classList.remove('sidebar-open');document.getElementById('overlay').classList.remove('active')"></div>

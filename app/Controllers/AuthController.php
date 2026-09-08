@@ -13,12 +13,12 @@ class AuthController extends Controller
 
     public function login()
     {
-        $email = trim((string) ($_POST['email'] ?? ''));
+        $login = trim((string) ($_POST['email'] ?? ''));
         $senha = $_POST['senha'] ?? '';
 
         $db = \App\Config\Database::getInstance();
-        $stmt = $db->prepare("SELECT * FROM usuarios WHERE email = :email AND status = 'Ativo' LIMIT 1");
-        $stmt->execute([':email' => $email]);
+        $stmt = $db->prepare("SELECT * FROM usuarios WHERE (email = :login_email OR nome = :login_nome) AND status = 'Ativo' LIMIT 1");
+        $stmt->execute([':login_email' => $login, ':login_nome' => $login]);
         $user = $stmt->fetch();
 
         $ok = $user && password_verify($senha, $user['senha']);

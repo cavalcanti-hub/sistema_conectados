@@ -35,10 +35,19 @@ class DashboardController extends Controller {
         $estoqueBaixo = $estModel->getEstoqueBaixo();
         $recentes = $osModel->recentes(8);
 
+        // OS ativas para detalhamento instantaneo nos modais
+        $todasOs = $osModel->getAll([], 100);
+
         $fatDia = (float) $finModel->totalReceitas('dia');
         $fatSemana = (float) $finModel->totalReceitas('semana');
         $fatMes = (float) $finModel->totalReceitas('mes');
         $despesasMes = (float) $finModel->totalDespesas('mes');
+        $despesasDia = (float) $finModel->totalDespesas('dia');
+        $despesasSemana = (float) $finModel->totalDespesas('semana');
+
+        $formasDia = $finModel->getFormasPagamento('dia');
+        $formasSemana = $finModel->getFormasPagamento('semana');
+        $formasMes = $finModel->getFormasPagamento('mes');
 
         $data = [
             'title' => 'Conectados - Dashboard',
@@ -46,11 +55,17 @@ class DashboardController extends Controller {
             'statusCount' => $statusCount,
             'estoqueBaixo' => $estoqueBaixo,
             'recentes' => $recentes,
+            'todasOs' => $todasOs,
             'fat_dia' => $fatDia,
             'fat_semana' => $fatSemana,
             'fat_mes' => $fatMes,
-            'receitas_mes' => $fatMes,
+            'despesas_dia' => $despesasDia,
+            'despesas_semana' => $despesasSemana,
             'despesas_mes' => $despesasMes,
+            'receitas_mes' => $fatMes,
+            'formas_dia' => $formasDia,
+            'formas_semana' => $formasSemana,
+            'formas_mes' => $formasMes,
         ];
 
         $printMode = normalize_print_mode($_GET['print'] ?? '');

@@ -37,15 +37,23 @@ class App
                 $value = substr($value, 1, -1);
             }
 
-            self::$env[$key] = $value;
-            $_ENV[$key] = $value;
-            putenv($key . '=' . $value);
+            $existing = $_ENV[$key] ?? getenv($key);
+            if ($existing === false || $existing === null) {
+                self::$env[$key] = $value;
+                $_ENV[$key] = $value;
+                putenv($key . '=' . $value);
+            } else {
+                self::$env[$key] = (string) $existing;
+            }
         }
     }
 
     public static function env(string $key, ?string $default = null): ?string
     {
-        $value = self::$env[$key] ?? $_ENV[$key] ?? getenv($key);
+        $value = $_ENV[$key] ?? getenv($key);
+        if ($value === false || $value === null || $value === '') {
+            $value = self::$env[$key] ?? null;
+        }
         if ($value === false || $value === null || $value === '') {
             return $default;
         }

@@ -9,6 +9,7 @@ config.production.php
 
 *.zip
 *.log
+ftp_deploy.php
 *.bak
 *.backup
 *.old

@@ -139,6 +139,10 @@ class PdvController extends Controller
     public function index()
     {
         $settings = (new \App\Models\ConfigModel())->getAll();
+        // Reconcile pending Point orders before calculating the cash summary.
+        // The model keeps this read-only for pending payments and only posts
+        // to the cash/financial records after Mercado Pago confirms approval.
+        (new \App\Models\MercadoPagoPointModel())->syncPendingPdvOrders(10);
         $caixa = $this->model->sincronizarCaixaAutomatico(current_user_id());
         $caixaResumo = $this->model->resumoCaixa(!empty($caixa['id']) ? (int) $caixa['id'] : null);
         $horarioCaixa = $this->model->horarioCaixa();

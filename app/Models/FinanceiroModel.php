@@ -202,6 +202,11 @@ class FinanceiroModel {
             return;
         }
 
+        // Point handles its own real fees via API webhooks
+        if (str_contains((string) ($revenue['forma_pagamento'] ?? ''), 'Mercado Pago Point')) {
+            return;
+        }
+
         $settings = $settings ?? (new ConfigModel())->getAll();
         $percent = $this->cardFeePercent((string) ($revenue['forma_pagamento'] ?? ''), $settings);
         $fee = $this->cardFeeDescriptionForRevenue($revenue, $percent);

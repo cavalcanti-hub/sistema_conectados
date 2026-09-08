@@ -119,8 +119,8 @@
 
         <form action="<?= route_url('login/login') ?>" method="POST">
             <div class="form-group">
-                <label>E-mail Corporativo</label>
-                <input type="email" name="email" required placeholder="admin@conectadosassistencia.com.br" autocomplete="username" autofocus>
+                <label>E-mail ou Usuário</label>
+                <input type="text" name="email" required placeholder="admin@conectadosassistencia.com.br ou Marcelo" autocomplete="username" autofocus>
             </div>
             <div class="form-group">
                 <label>Senha de Acesso</label>

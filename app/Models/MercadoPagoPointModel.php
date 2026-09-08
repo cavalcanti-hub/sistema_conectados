@@ -17,6 +17,8 @@ class MercadoPagoPointModel
             'mercado_pago_point_orders' => [
                 'id', 'os_id', 'pdv_venda_id', 'external_reference', 'status',
                 'amount', 'payload', 'financeiro_lancado_at',
+                'installments_requested', 'installments_cost', 'seller_total_fee',
+                'values_source', 'reconciliation_status'
             ],
         ], [
             'mercado_pago_point_orders' => ['idx_mp_point_orders_pdv', 'idx_mp_point_orders_status'],
@@ -97,6 +99,8 @@ class MercadoPagoPointModel
             ':payment_method' => $this->paymentMethodLabel($paymentType, $installments),
             ':terminal_id' => $terminalId,
             ':payload' => $this->safePayloadJson($response),
+            ':installments_requested' => $installments,
+            ':installments_cost' => $installmentsCost,
         ]);
 
         $this->log($externalReference, $orderId, $this->paymentIdFromOrder($response), (string) ($response['status'] ?? 'created'), 'Order enviada para Smart Point.', $response);
@@ -182,6 +186,8 @@ class MercadoPagoPointModel
             ':payment_method' => $this->paymentMethodLabel($paymentType, $installments),
             ':terminal_id' => $terminalId,
             ':payload' => $this->safePayloadJson($response),
+            ':installments_requested' => $installments,
+            ':installments_cost' => $installmentsCost,
         ]);
 
         $this->log($externalReference, $orderId, $this->paymentIdFromOrder($response), (string) ($response['status'] ?? 'created'), 'Venda PDV enviada para Smart Point.', $response);
@@ -232,6 +238,8 @@ class MercadoPagoPointModel
 
         if ($orderId !== '' && $this->isApprovedOrder($order, $status)) {
             $this->approveLocalOrderOnce($externalReference, $orderId, $paymentId, $order);
+        } elseif ($orderId !== '' && $this->isRefundedStatus($status)) {
+            $this->refundLocalOrderOnce($externalReference, $orderId, $paymentId);
         }
 
         return ['ok' => true, 'status' => $status, 'external_reference' => $externalReference, 'local' => (bool) $local];
@@ -267,6 +275,41 @@ class MercadoPagoPointModel
         });
     }
 
+    /**
+     * Reconsulta cobranças PDV que ficaram aguardando confirmação.
+     * Isso cobre o caso em que o operador fecha ou atualiza a tela antes
+     * do webhook/polling retornar, sem transformar pendência em venda paga.
+     */
+    public function syncPendingPdvOrders(int $limit = 10): int
+    {
+        $limit = max(1, min(25, $limit));
+        $stmt = $this->db->query("SELECT pdv_venda_id FROM mercado_pago_point_orders
+            WHERE pdv_venda_id IS NOT NULL
+              AND pdv_venda_id > 0
+              AND mp_order_id IS NOT NULL
+              AND mp_order_id <> ''
+              AND financeiro_lancado_at IS NULL
+              AND status IN ('created', 'pending', 'in_process', 'approved', 'paid', 'finished', 'processed')
+            ORDER BY id ASC
+            LIMIT {$limit}");
+        $rows = $stmt->fetchAll() ?: [];
+        $synced = 0;
+
+        foreach ($rows as $row) {
+            try {
+                $this->syncLatestForPdv((int) $row['pdv_venda_id']);
+                $synced++;
+            } catch (\Throwable $e) {
+                app_log('Falha ao reconciliar pendencia Point do PDV', [
+                    'venda_id' => (int) $row['pdv_venda_id'],
+                    'erro' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $synced;
+    }
+
     public function webhookUrl(): string
     {
         return absolute_route_url('mercadopago/pointWebhook');
@@ -276,11 +319,6 @@ class MercadoPagoPointModel
     {
         if (!$latest) {
             return null;
-        }
-
-        $currentStatus = strtolower((string) ($latest['status'] ?? ''));
-        if ($this->isApprovedStatus($currentStatus)) {
-            return $latest;
         }
 
         $orderId = trim((string) ($latest['mp_order_id'] ?? ''));
@@ -354,12 +392,27 @@ class MercadoPagoPointModel
                 return;
             }
 
+            // Extract installments_cost from order config (official source)
+            $installmentsCost = (string) ($order['config']['payment_method']['installments_cost']
+                ?? $local['installments_cost']
+                ?? 'seller');
+            if (!in_array($installmentsCost, ['buyer', 'seller'], true)) {
+                $installmentsCost = 'seller';
+            }
+
+            // Extract numeric reference_id from order transactions (required for /v1/payments/)
+            $numericPaymentId = $this->numericPaymentIdFromOrder($order);
+            $paymentDetails = $numericPaymentId ? $this->fetchPaymentDetails($numericPaymentId) : null;
+            if (!$paymentDetails && $paymentId) {
+                $paymentDetails = $this->fetchPaymentDetails($paymentId);
+            }
+
+            $realData = $this->extractRealPaymentData($paymentDetails, $amount, $installmentsCost);
+
+            $this->updateLocalOrderWithRealData((int) $local['id'], $realData, $paymentId);
+
             if ($pdvVendaId > 0) {
-                $this->approvePdvOrder($pdvVendaId, $paymentMethod, $paymentId ?: $orderId);
-                $db->prepare("UPDATE mercado_pago_point_orders
-                    SET financeiro_lancado_at = NOW(), payment_id = COALESCE(:payment_id, payment_id), status = 'processed'
-                    WHERE id = :id")
-                    ->execute([':payment_id' => $paymentId, ':id' => (int) $local['id']]);
+                $this->approvePdvOrder($pdvVendaId, $paymentMethod, $paymentId ?: $orderId, $realData['seller_total_fee'] ?? 0.0);
                 $db->commit();
                 return;
             }
@@ -387,7 +440,19 @@ class MercadoPagoPointModel
                 ':data_pagamento' => date('Y-m-d'),
                 ':forma_pagamento' => $paymentMethod,
             ]);
-            $financeiro->syncCardFeeForRevenue($revenueId);
+            
+            if (($realData['seller_total_fee'] ?? 0) > 0) {
+                $financeiro->create([
+                    ':tipo' => 'Despesa',
+                    ':categoria' => 'Taxa Maquininha',
+                    ':descricao' => 'Taxa da maquininha - lancamento financeiro #' . $revenueId . ' (Point)',
+                    ':valor' => $realData['seller_total_fee'],
+                    ':os_id' => $osId,
+                    ':usuario_id' => null,
+                    ':data_pagamento' => date('Y-m-d'),
+                    ':forma_pagamento' => $paymentMethod,
+                ]);
+            }
 
             $totalPago = $osModel->totalPagamentos($osId);
             $stmt = $db->prepare("SELECT valor_total FROM ordens_servico WHERE id = :id");
@@ -396,11 +461,6 @@ class MercadoPagoPointModel
             $situacao = ($totalOs > 0 && $totalPago + 0.01 >= $totalOs) ? 'Pago' : 'Parcial';
             $db->prepare("UPDATE ordens_servico SET situacao_pagamento = :situacao, forma_pagamento = :forma WHERE id = :id")
                 ->execute([':situacao' => $situacao, ':forma' => $paymentMethod, ':id' => $osId]);
-
-            $db->prepare("UPDATE mercado_pago_point_orders
-                SET financeiro_lancado_at = NOW(), payment_id = COALESCE(:payment_id, payment_id), status = 'processed'
-                WHERE id = :id")
-                ->execute([':payment_id' => $paymentId, ':id' => (int) $local['id']]);
 
             $osModel->addHistorico($osId, null, '', 'Pagamento', 'Pagamento aprovado na Smart Point.');
             $db->commit();
@@ -412,11 +472,189 @@ class MercadoPagoPointModel
         }
     }
 
+
+    private function fetchPaymentDetails(string $paymentId): ?array
+    {
+        $settings = $this->configModel->getAll();
+        $accessToken = trim((string) ($settings['mercadopago_access_token'] ?? ''));
+        if ($accessToken === '') {
+            return null;
+        }
+        try {
+            return $this->request('GET', '/v1/payments/' . rawurlencode($paymentId), null, $accessToken);
+        } catch (\Throwable $e) {
+            app_log('Falha ao buscar detalhes do pagamento Point', ['payment_id' => $paymentId, 'erro' => $e->getMessage()]);
+            return null;
+        }
+    }
+
+    private function extractRealPaymentData(?array $payment, float $baseAmount, string $installmentsCost = 'seller'): array
+    {
+        $data = [
+            'installments_confirmed' => 1,
+            'customer_total_paid'    => $baseAmount,
+            'customer_financing_cost' => 0.0,
+            'seller_processing_fee'  => 0.0,
+            'seller_financing_cost'  => 0.0,
+            'seller_total_fee'       => 0.0,
+            'seller_net_received'    => $baseAmount,
+        ];
+        if (!$payment) {
+            return $data;
+        }
+
+        $data['installments_confirmed'] = (int) ($payment['installments'] ?? 1);
+        $data['customer_total_paid']    = (float) ($payment['transaction_details']['total_paid_amount'] ?? $payment['transaction_amount'] ?? $baseAmount);
+        $data['seller_net_received']    = (float) ($payment['transaction_details']['net_received_amount'] ?? $baseAmount);
+        $data['customer_financing_cost'] = round(max(0, $data['customer_total_paid'] - $baseAmount), 2);
+
+        $feeDetails = $payment['fee_details'] ?? [];
+        if (!empty($feeDetails) && is_array($feeDetails)) {
+            foreach ($feeDetails as $fee) {
+                if (($fee['fee_payer'] ?? '') === 'collector') {
+                    $amount = round((float) ($fee['amount'] ?? 0), 2);
+                    $isFinancingFee = ($fee['type'] ?? '') === 'financing_fee';
+
+                    if ($isFinancingFee) {
+                        $data['seller_financing_cost'] += $amount;
+                        // Only add to seller_total_fee if seller is responsible for financing cost
+                        if ($installmentsCost === 'seller') {
+                            $data['seller_total_fee'] += $amount;
+                        }
+                    } else {
+                        $data['seller_processing_fee'] += $amount;
+                        $data['seller_total_fee']       += $amount;
+                    }
+                }
+            }
+        } else {
+            // Fallback: no fee_details available, estimate from net_received
+            $data['seller_total_fee']      = round(max(0, $baseAmount - $data['seller_net_received']), 2);
+            $data['seller_processing_fee'] = $data['seller_total_fee'];
+        }
+
+        $data['seller_total_fee']      = round($data['seller_total_fee'], 2);
+        $data['seller_processing_fee'] = round($data['seller_processing_fee'], 2);
+        $data['seller_financing_cost'] = round($data['seller_financing_cost'], 2);
+
+        return $data;
+    }
+
+
+
+    private function refundLocalOrderOnce(string $externalReference, string $orderId, ?string $paymentId): void
+    {
+        $db = Database::getInstance();
+        $db->beginTransaction();
+
+        try {
+            $local = null;
+            if ($externalReference !== '') {
+                $stmt = $db->prepare("SELECT * FROM mercado_pago_point_orders WHERE external_reference = :ref FOR UPDATE");
+                $stmt->execute([':ref' => $externalReference]);
+                $local = $stmt->fetch() ?: null;
+            }
+            if (!$local && $orderId !== '') {
+                $stmt = $db->prepare("SELECT * FROM mercado_pago_point_orders WHERE mp_order_id = :order_id FOR UPDATE");
+                $stmt->execute([':order_id' => $orderId]);
+                $local = $stmt->fetch() ?: null;
+            }
+
+            if (!$local) {
+                $db->commit();
+                return;
+            }
+
+            $osId = (int) ($local['os_id'] ?? 0);
+            $pdvVendaId = (int) ($local['pdv_venda_id'] ?? 0);
+            
+            if (($osId <= 0 && $pdvVendaId <= 0) || empty($local['financeiro_lancado_at']) || ($local['reconciliation_status'] ?? '') === 'refunded') {
+                $db->commit();
+                return;
+            }
+
+            $financeiro = new FinanceiroModel();
+            
+            // Reverter Receita original
+            $financeiro->create([
+                ':tipo' => 'Despesa',
+                ':categoria' => 'Estorno/Cancelamento',
+                ':descricao' => 'Estorno de pagamento Point - ' . ($local['numero_os'] ? 'OS #' . $local['numero_os'] : 'PDV #' . $local['pdv_venda_id']),
+                ':valor' => (float) ($local['amount'] ?? 0),
+                ':os_id' => $osId > 0 ? $osId : null,
+                ':usuario_id' => null,
+                ':data_pagamento' => date('Y-m-d'),
+                ':forma_pagamento' => 'Mercado Pago Point',
+            ]);
+
+            // Reverter Despesa da taxa, se houve
+            if (($local['seller_total_fee'] ?? 0) > 0) {
+                $financeiro->create([
+                    ':tipo' => 'Receita',
+                    ':categoria' => 'Estorno/Cancelamento',
+                    ':descricao' => 'Estorno de taxa Point - ' . ($local['numero_os'] ? 'OS #' . $local['numero_os'] : 'PDV #' . $local['pdv_venda_id']),
+                    ':valor' => (float) $local['seller_total_fee'],
+                    ':os_id' => $osId > 0 ? $osId : null,
+                    ':usuario_id' => null,
+                    ':data_pagamento' => date('Y-m-d'),
+                    ':forma_pagamento' => 'Mercado Pago Point',
+                ]);
+            }
+
+            $db->prepare("UPDATE mercado_pago_point_orders
+                SET reconciliation_status = 'refunded', reconciliation_date = NOW()
+                WHERE id = :id")
+                ->execute([':id' => (int) $local['id']]);
+
+            if ($osId > 0) {
+                $osModel = new OsModel();
+                $osModel->addHistorico($osId, null, '', 'Estorno', 'Pagamento Point cancelado ou estornado.');
+            }
+
+            $db->commit();
+        } catch (\Throwable $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function updateLocalOrderWithRealData(int $id, array $data, ?string $paymentId): void
+    {
+        $stmt = $this->db->prepare("UPDATE mercado_pago_point_orders
+            SET financeiro_lancado_at = NOW(),
+                payment_id = COALESCE(:payment_id, payment_id),
+                status = 'processed',
+                installments_confirmed = :installments_confirmed,
+                customer_total_paid = :customer_total_paid,
+                customer_financing_cost = :customer_financing_cost,
+                seller_processing_fee = :seller_processing_fee,
+                seller_financing_cost = :seller_financing_cost,
+                seller_total_fee = :seller_total_fee,
+                seller_net_received = :seller_net_received,
+                values_source = 'confirmed',
+                reconciliation_status = 'conciliated',
+                reconciliation_date = NOW()
+            WHERE id = :id");
+        $stmt->execute([
+            ':payment_id' => $paymentId,
+            ':installments_confirmed' => $data['installments_confirmed'],
+            ':customer_total_paid' => $data['customer_total_paid'],
+            ':customer_financing_cost' => $data['customer_financing_cost'],
+            ':seller_processing_fee' => $data['seller_processing_fee'],
+            ':seller_financing_cost' => $data['seller_financing_cost'],
+            ':seller_total_fee' => $data['seller_total_fee'],
+            ':seller_net_received' => $data['seller_net_received'],
+            ':id' => $id,
+        ]);
+    }
+
     private function saveLocalOrder(array $data): void
     {
         $stmt = $this->db->prepare("INSERT INTO mercado_pago_point_orders
-            (os_id, pdv_venda_id, numero_os, external_reference, mp_order_id, payment_id, status, status_detail, amount, payment_method, terminal_id, payload)
-            VALUES (:os_id, :pdv_venda_id, :numero_os, :external_reference, :mp_order_id, :payment_id, :status, :status_detail, :amount, :payment_method, :terminal_id, :payload)
+            (os_id, pdv_venda_id, numero_os, external_reference, mp_order_id, payment_id, status, status_detail, amount, payment_method, terminal_id, payload, installments_requested, installments_cost)
+            VALUES (:os_id, :pdv_venda_id, :numero_os, :external_reference, :mp_order_id, :payment_id, :status, :status_detail, :amount, :payment_method, :terminal_id, :payload, :installments_requested, :installments_cost)
             ON DUPLICATE KEY UPDATE
                 os_id = VALUES(os_id),
                 pdv_venda_id = VALUES(pdv_venda_id),
@@ -427,11 +665,13 @@ class MercadoPagoPointModel
                 amount = VALUES(amount),
                 payment_method = VALUES(payment_method),
                 terminal_id = VALUES(terminal_id),
-                payload = VALUES(payload)");
+                payload = VALUES(payload),
+                installments_requested = COALESCE(VALUES(installments_requested), installments_requested),
+                installments_cost = COALESCE(VALUES(installments_cost), installments_cost)");
         $stmt->execute($data);
     }
 
-    private function approvePdvOrder(int $vendaId, string $paymentMethod, string $paymentReference): void
+    private function approvePdvOrder(int $vendaId, string $paymentMethod, string $paymentReference, float $realFee): void
     {
         $pdv = new PdvModel();
         $venda = $pdv->findVenda($vendaId);
@@ -462,12 +702,12 @@ class MercadoPagoPointModel
             ':forma_pagamento' => $paymentMethod,
         ]);
 
-        if ((float) ($vendaFinal['taxa_cartao_valor'] ?? 0) > 0) {
+        if ($realFee > 0) {
             $financeiro->create([
                 ':tipo' => 'Despesa',
                 ':categoria' => 'Taxa Maquininha',
-                ':descricao' => 'Taxa da maquininha - venda ' . $vendaFinal['numero_venda'] . ' (' . number_format((float) $vendaFinal['taxa_cartao_percentual'], 2, ',', '.') . '%)',
-                ':valor' => (float) $vendaFinal['taxa_cartao_valor'],
+                ':descricao' => 'Taxa da maquininha - venda ' . $vendaFinal['numero_venda'] . ' (Point)',
+                ':valor' => $realFee,
                 ':os_id' => $vendaFinal['os_id'] ?: null,
                 ':usuario_id' => $vendaFinal['usuario_id'] ?: null,
                 ':data_pagamento' => date('Y-m-d'),
@@ -487,7 +727,7 @@ class MercadoPagoPointModel
             $stmt = $this->db->prepare("UPDATE mercado_pago_point_orders
                 SET mp_order_id = COALESCE(NULLIF(:order_id, ''), mp_order_id),
                     payment_id = COALESCE(:payment_id, payment_id),
-                    status = CASE WHEN financeiro_lancado_at IS NOT NULL THEN status ELSE COALESCE(NULLIF(:status, ''), status) END,
+                    status = COALESCE(NULLIF(:status, ''), status),
                     status_detail = :detail,
                     payload = :payload
                 WHERE external_reference = :ref");
@@ -504,7 +744,7 @@ class MercadoPagoPointModel
 
         $stmt = $this->db->prepare("UPDATE mercado_pago_point_orders
             SET payment_id = COALESCE(:payment_id, payment_id),
-                status = CASE WHEN financeiro_lancado_at IS NOT NULL THEN status ELSE COALESCE(NULLIF(:status, ''), status) END,
+                status = COALESCE(NULLIF(:status, ''), status),
                 status_detail = :detail,
                 payload = :payload
             WHERE mp_order_id = :order_id");
@@ -622,6 +862,19 @@ class MercadoPagoPointModel
         return null;
     }
 
+    private function numericPaymentIdFromOrder(array $order): ?string
+    {
+        $payments = $order['transactions']['payments'] ?? null;
+        if (is_array($payments) && isset($payments[0]) && is_array($payments[0]) && !empty($payments[0]['reference_id'])) {
+            $refId = (string) $payments[0]['reference_id'];
+            if (ctype_digit($refId)) {
+                return $refId;
+            }
+        }
+        return null;
+    }
+
+
     private function paidAmountFromOrder(array $order): float
     {
         $value = $order['total_paid_amount'] ?? $order['transactions']['payments'][0]['amount'] ?? 0;
@@ -649,6 +902,11 @@ class MercadoPagoPointModel
     private function isApprovedStatus(string $status): bool
     {
         return in_array(strtolower($status), ['processed', 'paid', 'approved', 'finished'], true);
+    }
+
+    private function isRefundedStatus(string $status): bool
+    {
+        return in_array(strtolower($status), ['refunded', 'cancelled', 'charged_back', 'rejected'], true);
     }
 
     private function idempotencyKey(string $reference): string

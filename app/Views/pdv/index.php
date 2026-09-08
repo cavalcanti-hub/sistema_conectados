@@ -42,6 +42,32 @@
         top: 0; left: 0; right: 0; height: 6px;
         background: linear-gradient(90deg, #10b981, #34d399);
     }
+    .point-success-close {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        z-index: 2;
+        width: 38px;
+        height: 38px;
+        border: 1px solid #dbe3ec;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8fafc;
+        color: #475569;
+        cursor: pointer;
+        transition: .2s;
+    }
+    .point-success-close:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+        transform: scale(1.05);
+    }
+    .point-success-close i {
+        width: 20px;
+        height: 20px;
+    }
     .point-success-logo {
         height: 48px;
         margin-bottom: 0.5rem;
@@ -359,7 +385,7 @@
                      <?= $p['quantidade']<=0 ? 'style="opacity:.5;pointer-events:none;"' : '' ?>>
                     <div class="produto-thumb">
                         <?php if(!empty($imagemProduto)): ?>
-                        <img src="<?= htmlspecialchars($imagemProduto) ?>" alt="<?= htmlspecialchars($p['nome']) ?>" loading="lazy" onerror="this.closest('.produto-thumb').innerHTML='<i data-lucide=&quot;package&quot;></i>'; lucide.createIcons();">
+                        <img src="<?= htmlspecialchars($imagemProduto) ?>" alt="<?= htmlspecialchars($p['nome']) ?>" loading="eager" onerror="this.closest('.produto-thumb').innerHTML='<i data-lucide=&quot;package&quot;></i>'; lucide.createIcons();">
                         <?php else: ?>
                         <i data-lucide="package"></i>
                         <?php endif; ?>
@@ -488,8 +514,11 @@
 </div>
 
 
-<div id="point-success-modal" class="point-success-modal" aria-hidden="true" onclick="if(event.target.id==='point-success-modal'){window.location.href=pdvPointSuccessUrl;}">
+<div id="point-success-modal" class="point-success-modal" aria-hidden="true" onclick="if(event.target.id==='point-success-modal'){fecharCardSucessoComLogo();}">
     <div class="point-success-dialog" role="dialog" aria-modal="true" aria-labelledby="point-success-title" aria-describedby="point-success-message" onclick="event.stopPropagation()">
+        <button type="button" class="point-success-close" aria-label="Fechar" title="Fechar" onclick="fecharCardSucessoComLogo()">
+            <i data-lucide="x"></i>
+        </button>
         <img src="<?= app_url('assets/img/logo.png') ?>" alt="Logo" class="point-success-logo">
         <div class="point-success-slogan">Você conectado sempre</div>
         
@@ -498,8 +527,8 @@
         </div>
         <h2 id="point-success-title">Pagamento aprovado</h2>
         <p id="point-success-message">O pagamento na Smart Point foi efetuado com sucesso.</p>
-        <button type="button" class="btn" onclick="window.location.href=pdvPointSuccessUrl">
-            <i data-lucide="eye"></i> Ver venda
+        <button type="button" class="btn" id="point-success-action" onclick="executarAcaoSucesso()">
+            <i data-lucide="eye"></i> <span id="point-success-action-label">Ver venda</span>
         </button>
     </div>
 </div>
@@ -535,9 +564,12 @@ const taxasCartao = {
 const caixaAberto = <?= json_encode($caixaAberto) ?>;
 <?php $pointPdvVendaId = (int) ($_GET['venda_id'] ?? 0); ?>
 const pdvPointPending = <?= json_encode(!empty($_GET['point_sent']) && $pointPdvVendaId > 0) ?>;
+const pdvVendaFinalizadaAgora = <?= json_encode(!empty($_GET['success']) && empty($_GET['point_confirmed']) && $pointPdvVendaId > 0) ?>;
 const pdvPointStatusUrl = <?= json_attr(route_url('pdv/pointStatus', ['venda_id' => $pointPdvVendaId])) ?>;
-const pdvPointSuccessUrl = <?= json_attr(route_url('pdv', ['success' => 1, 'venda_id' => $pointPdvVendaId])) ?>;
+const pdvPointSuccessUrl = <?= json_attr(route_url('pdv', ['success' => 1, 'point_confirmed' => 1, 'venda_id' => $pointPdvVendaId])) ?>;
+const pdvReceiptUrl = <?= json_attr(route_url('pdv/imprimir', ['id' => $pointPdvVendaId])) ?>;
 const pdvPointApprovedStatuses = new Set(['paid', 'approved', 'finished', 'processed']);
+let pdvSuccessActionUrl = pdvPointSuccessUrl;
 
 function atualizarRelogioPdv() {
     const now = new Date();
@@ -619,18 +651,45 @@ function confirmarDialogoPdv() {
     }
 }
 
-function abrirPagamentoPointAprovado(data) {
-    const paymentId = data && data.payment_id ? String(data.payment_id) : '';
+function mostrarCardSucessoComLogo(titulo, mensagem, actionUrl, actionLabel) {
     const modal = document.getElementById('point-success-modal');
+    const title = document.getElementById('point-success-title');
     const msg = document.getElementById('point-success-message');
-    if(msg && paymentId) {
-        msg.textContent = 'Pagamento efetuado com sucesso na Smart Point. Codigo: ' + paymentId + '.';
-    }
+    const actionText = document.getElementById('point-success-action-label');
+    pdvSuccessActionUrl = actionUrl;
+    if (title) title.textContent = titulo;
+    if (msg) msg.textContent = mensagem;
+    if (actionText) actionText.textContent = actionLabel;
     if(modal) {
         modal.classList.add('active');
         modal.setAttribute('aria-hidden', 'false');
         lucide.createIcons();
     }
+}
+
+function executarAcaoSucesso() {
+    if (pdvSuccessActionUrl) {
+        window.location.href = pdvSuccessActionUrl;
+    }
+}
+
+function fecharCardSucessoComLogo() {
+    const modal = document.getElementById('point-success-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+}
+
+function abrirPagamentoPointAprovado(data) {
+    const paymentId = data && data.payment_id ? String(data.payment_id) : '';
+    const complemento = paymentId ? ' Código: ' + paymentId + '.' : '';
+    mostrarCardSucessoComLogo(
+        'Pagamento aprovado',
+        'O pagamento na Smart Point foi efetuado com sucesso.' + complemento,
+        pdvPointSuccessUrl,
+        'Ver venda'
+    );
 }
 
 function iniciarPollingPointPdv() {
@@ -945,8 +1004,17 @@ document.getElementById('pdv-dialog-confirm').addEventListener('click', confirma
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
         fecharDialogoPdv();
+        fecharCardSucessoComLogo();
     }
 });
+if (pdvVendaFinalizadaAgora) {
+    setTimeout(() => mostrarCardSucessoComLogo(
+        'Venda finalizada com sucesso!',
+        'O estoque foi baixado, a receita foi registrada e o caixa foi atualizado.',
+        pdvReceiptUrl,
+        'Imprimir recibo'
+    ), 150);
+}
 </script>
 </body>
 </html>

@@ -72,6 +72,29 @@ $resolveIcon = function ($category) {
 ?>
 
 <style>
+    /* ============================================
+       VITRINE — DESIGN SYSTEM V2
+    ============================================ */
+    @keyframes heroFloat {
+        0%, 100% { transform: rotate(7deg) translateY(0); }
+        50% { transform: rotate(7deg) translateY(-12px); }
+    }
+    @keyframes orbitSpin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    @keyframes meshMove {
+        0% { background-position: 0 0; }
+        100% { background-position: 60px 60px; }
+    }
+    @keyframes pulse-glow {
+        0%, 100% { opacity: 0.55; }
+        50% { opacity: 0.85; }
+    }
+    @keyframes fadeSlideUp {
+        from { opacity: 0; transform: translateY(18px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
     .shop-home {
         display: flex;
         flex-direction: column;
@@ -83,47 +106,89 @@ $resolveIcon = function ($category) {
         width: 100vw;
         margin-left: calc(50% - 50vw);
         margin-right: calc(50% - 50vw);
-        min-height: clamp(300px, 31vw, 420px);
+        min-height: clamp(340px, 34vw, 480px);
         overflow: hidden;
         background:
-            linear-gradient(115deg, rgba(8, 20, 48, 0.98) 0%, rgba(13, 44, 113, 0.98) 52%, rgba(45, 45, 255, 0.92) 100%);
-        border-top: 1px solid rgba(255, 255, 255, 0.12);
-        border-bottom: 1px solid rgba(0, 52, 154, 0.12);
+            linear-gradient(135deg,
+                #020818 0%,
+                #071550 28%,
+                #0a2380 55%,
+                #1a3fbb 78%,
+                #2d2dff 100%);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        border-bottom: 1px solid rgba(0, 40, 120, 0.3);
     }
-    .hero-banner::before,
+    /* Animated dot-mesh overlay */
+    .hero-banner::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+            radial-gradient(circle at 14% 18%, rgba(120, 180, 255, 0.28) 0, transparent 18rem),
+            radial-gradient(circle at 78% 30%, rgba(100, 220, 255, 0.25) 0, transparent 22rem),
+            radial-gradient(circle at 50% 90%, rgba(60, 60, 255, 0.22) 0, transparent 18rem),
+            radial-gradient(circle 1px at center, rgba(255,255,255,.35) 0, transparent 1px);
+        background-size: auto, auto, auto, 28px 28px;
+        animation: meshMove 8s linear infinite;
+        z-index: 0;
+    }
+    /* Diagonal highlight sweep */
     .hero-banner::after {
         content: "";
         position: absolute;
-        pointer-events: none;
-    }
-    .hero-banner::before {
-        inset: 0;
-        background:
-            radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.2), transparent 18rem),
-            radial-gradient(circle at 74% 34%, rgba(76, 201, 255, 0.22), transparent 21rem);
-    }
-    .hero-banner::after {
-        right: -12vw;
-        top: -38%;
-        width: min(680px, 54vw);
-        height: 170%;
+        right: -15vw;
+        top: -40%;
+        width: min(720px, 58vw);
+        height: 180%;
         border-radius: 999px;
-        background: linear-gradient(135deg, rgba(255,255,255,.18), rgba(255,255,255,0));
-        transform: rotate(-18deg);
-        opacity: 0.7;
+        background: linear-gradient(135deg,
+            rgba(255,255,255,.14) 0%,
+            rgba(100,180,255,.10) 50%,
+            rgba(255,255,255,0) 100%);
+        transform: rotate(-16deg);
+        pointer-events: none;
+        z-index: 0;
+    }
+    /* Floating glow orbs */
+    .hero-glow-1, .hero-glow-2, .hero-glow-3 {
+        position: absolute;
+        border-radius: 999px;
+        pointer-events: none;
+        z-index: 0;
+        animation: pulse-glow 4s ease-in-out infinite;
+    }
+    .hero-glow-1 {
+        width: 380px; height: 380px;
+        left: -60px; top: -80px;
+        background: radial-gradient(circle, rgba(80, 130, 255, 0.32), transparent 70%);
+        animation-delay: 0s;
+    }
+    .hero-glow-2 {
+        width: 480px; height: 480px;
+        right: 20%; bottom: -160px;
+        background: radial-gradient(circle, rgba(45, 120, 255, 0.2), transparent 70%);
+        animation-delay: 1.8s;
+    }
+    .hero-glow-3 {
+        width: 260px; height: 260px;
+        right: 6%; top: -40px;
+        background: radial-gradient(circle, rgba(120, 200, 255, 0.25), transparent 70%);
+        animation-delay: 0.9s;
     }
     .hero-banner-layout {
         position: relative;
         z-index: 1;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(300px, 0.62fr);
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 0.58fr);
         align-items: center;
-        gap: clamp(1rem, 4vw, 4rem);
+        gap: clamp(1rem, 4vw, 5rem);
         width: 100%;
         max-width: 1480px;
-        min-height: clamp(300px, 31vw, 420px);
+        min-height: clamp(340px, 34vw, 480px);
         margin: 0 auto;
-        padding: clamp(1.5rem, 3.1vw, 3.1rem) clamp(1rem, 2vw, 1.75rem);
+        padding: clamp(2rem, 3.5vw, 3.5rem) clamp(1rem, 2vw, 1.75rem);
+        animation: fadeSlideUp 0.7s ease both;
     }
     .hero-banner-content {
         position: relative;
@@ -139,16 +204,28 @@ $resolveIcon = function ($category) {
     .hero-banner-kicker {
         display: inline-flex;
         align-items: center;
-        min-height: 30px;
-        padding: 0 .72rem;
-        border: 1px solid rgba(255, 255, 255, 0.18);
+        gap: 0.45rem;
+        min-height: 32px;
+        padding: 0 1rem;
+        border: 1px solid rgba(120, 200, 255, 0.38);
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.1);
-        font-size: 0.82rem;
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(10px);
+        font-size: 0.78rem;
         font-weight: 800;
-        letter-spacing: 0;
+        letter-spacing: 0.06em;
         text-transform: uppercase;
-        color: #dbeafe;
+        color: #93c5fd;
+        box-shadow: 0 0 0 1px rgba(120, 200, 255, 0.12) inset;
+    }
+    .hero-banner-kicker::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: #60c8ff;
+        box-shadow: 0 0 8px #60c8ff;
+        flex: 0 0 auto;
     }
     .hero-banner-logo {
         width: clamp(178px, 20vw, 300px);
@@ -164,17 +241,31 @@ $resolveIcon = function ($category) {
         display: block;
         margin: 0;
         font-family: 'Outfit', sans-serif;
-        font-size: clamp(1.8rem, 3vw, 3.05rem);
-        line-height: 1.04;
-        max-width: 640px;
+        font-size: clamp(2rem, 3.4vw, 3.4rem);
+        line-height: 1.03;
+        max-width: 660px;
+        text-shadow: 0 2px 40px rgba(0, 0, 0, 0.35);
+        letter-spacing: -0.02em;
+    }
+    .hero-title-accent {
+        background: linear-gradient(90deg, #60c8ff 0%, #a78bfa 60%, #60c8ff 100%);
+        background-size: 200% 100%;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: shimmerText 4s linear infinite;
+    }
+    @keyframes shimmerText {
+        from { background-position: 0% 0%; }
+        to { background-position: 200% 0%; }
     }
     .hero-banner p {
         display: block;
         margin: 0;
-        max-width: 580px;
-        font-size: clamp(.96rem, 1.15vw, 1.08rem);
-        line-height: 1.6;
-        color: rgba(255,255,255,0.84);
+        max-width: 560px;
+        font-size: clamp(1rem, 1.18vw, 1.12rem);
+        line-height: 1.65;
+        color: rgba(200, 220, 255, 0.9);
     }
     .hero-banner-actions {
         display: flex;
@@ -252,147 +343,283 @@ $resolveIcon = function ($category) {
     }
     .hero-orbit {
         position: absolute;
-        width: min(420px, 34vw);
+        width: min(440px, 36vw);
         aspect-ratio: 1;
         border-radius: 999px;
-        border: 1px solid rgba(255,255,255,.18);
+        border: 1px solid rgba(100, 180, 255, 0.22);
         background:
-            radial-gradient(circle, rgba(255,255,255,.11) 0 2px, transparent 3px),
-            linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,0));
-        box-shadow: inset 0 0 80px rgba(125, 211, 252, 0.15);
-        opacity: .92;
+            radial-gradient(circle, rgba(255,255,255,.06) 0 2px, transparent 3px),
+            linear-gradient(135deg, rgba(100,180,255,.07), rgba(255,255,255,0));
+        box-shadow:
+            inset 0 0 100px rgba(80, 160, 255, 0.12),
+            0 0 60px rgba(60, 140, 255, 0.08);
+        animation: orbitSpin 28s linear infinite;
+        opacity: .85;
+    }
+    .hero-orbit-inner {
+        position: absolute;
+        width: min(310px, 26vw);
+        aspect-ratio: 1;
+        border-radius: 999px;
+        border: 1px dashed rgba(120, 200, 255, 0.18);
+        animation: orbitSpin 18s linear infinite reverse;
+    }
+    /* Floating mini badges on device art */
+    .hero-float-badge {
+        position: absolute;
+        display: flex;
+        align-items: center;
+        gap: 0.42rem;
+        padding: 0.45rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.72rem;
+        font-weight: 800;
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        white-space: nowrap;
+        z-index: 5;
+        animation: fadeSlideUp 0.7s ease both;
+        box-shadow: 0 8px 24px -8px rgba(0,0,0,0.35);
+    }
+    .hero-float-badge.badge-green {
+        background: rgba(16, 185, 129, 0.18);
+        border: 1px solid rgba(52, 211, 153, 0.35);
+        color: #6ee7b7;
+        top: 14%;
+        left: -28%;
+        animation-delay: 0.4s;
+    }
+    .hero-float-badge.badge-purple {
+        background: rgba(139, 92, 246, 0.18);
+        border: 1px solid rgba(167, 139, 250, 0.35);
+        color: #c4b5fd;
+        bottom: 20%;
+        left: -32%;
+        animation-delay: 0.6s;
     }
     .hero-device {
         position: relative;
-        width: min(230px, 20vw);
-        min-width: 190px;
-        aspect-ratio: 10 / 16;
-        border-radius: 34px;
-        padding: 0.72rem;
-        background: linear-gradient(145deg, #081226, #0f2552 52%, #122f74);
-        border: 1px solid rgba(255,255,255,.22);
+        width: min(240px, 21vw);
+        min-width: 195px;
+        aspect-ratio: 10 / 17;
+        border-radius: 36px;
+        padding: 0.65rem;
+        background: linear-gradient(155deg, #0a1628, #0d2356 45%, #1433a0);
+        border: 1px solid rgba(100, 180, 255, 0.3);
         box-shadow:
-            inset 0 1px 0 rgba(255,255,255,.16),
-            0 34px 70px -34px rgba(0,0,0,.78),
-            0 0 0 10px rgba(255,255,255,.04);
-        transform: rotate(7deg);
+            inset 0 1px 0 rgba(255,255,255,.2),
+            inset 0 -1px 0 rgba(0,0,0,.4),
+            0 40px 80px -30px rgba(0,0,0,.85),
+            0 0 0 8px rgba(255,255,255,.04),
+            0 0 50px rgba(60, 120, 255, 0.2);
+        animation: heroFloat 5s ease-in-out infinite;
     }
+    /* Camera notch */
     .hero-device::before {
         content: "";
         position: absolute;
-        top: .62rem;
+        top: .55rem;
         left: 50%;
-        width: 58px;
-        height: 6px;
+        width: 62px;
+        height: 7px;
         border-radius: 999px;
-        background: rgba(255,255,255,.42);
+        background: linear-gradient(90deg, rgba(255,255,255,.25), rgba(255,255,255,.45), rgba(255,255,255,.25));
         transform: translateX(-50%);
+        box-shadow: 0 0 8px rgba(120, 200, 255, 0.3);
+        z-index: 2;
+    }
+    /* Side button highlight */
+    .hero-device::after {
+        content: "";
+        position: absolute;
+        right: -2px;
+        top: 20%;
+        width: 3px;
+        height: 14%;
+        border-radius: 2px 0 0 2px;
+        background: rgba(255,255,255,.22);
     }
     .hero-device-screen {
         height: 100%;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        gap: 1rem;
-        padding: 2.25rem 1rem 1rem;
-        border-radius: 26px;
+        gap: 0.7rem;
+        padding: 1.8rem 0.75rem 0.85rem;
+        border-radius: 28px;
+        /* Dark OLED screen */
+        background: linear-gradient(175deg, #0a0a12 0%, #080c1e 55%, #06091a 100%);
+        color: #fff;
+        overflow: hidden;
+        position: relative;
+    }
+    /* Subtle inner glow on the screen */
+    .hero-device-screen::before {
+        content: "";
+        position: absolute;
+        inset: 0;
         background:
-            linear-gradient(180deg, rgba(255,255,255,.96), rgba(236,245,255,.96));
-        color: #071b37;
+            radial-gradient(ellipse at 50% 30%, rgba(60, 100, 255, 0.18) 0, transparent 65%),
+            radial-gradient(ellipse at 50% 100%, rgba(30, 60, 200, 0.12) 0, transparent 60%);
+        pointer-events: none;
     }
-    .hero-device-screen span {
-        display: inline-flex;
-        width: max-content;
-        max-width: 100%;
-        min-height: 26px;
+    /* Status bar */
+    .device-status-bar {
+        display: flex;
         align-items: center;
-        padding: 0 .62rem;
-        border-radius: 999px;
-        background: #e6f0ff;
-        color: var(--primary);
-        font-size: .72rem;
-        font-weight: 900;
+        justify-content: space-between;
+        padding: 0 0.25rem;
+        position: relative;
+        z-index: 1;
+        flex: 0 0 auto;
     }
-    .hero-device-screen strong {
-        font-family: 'Outfit', sans-serif;
-        font-size: 1.22rem;
-        line-height: 1.08;
+    /* Logo area */
+    .device-logo-area {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        flex: 1;
+        position: relative;
+        z-index: 1;
+        gap: 0.45rem;
+    }
+    .device-logo-glow {
+        position: absolute;
+        width: 120px;
+        height: 60px;
+        background: radial-gradient(ellipse, rgba(80, 150, 255, 0.4) 0, transparent 70%);
+        filter: blur(14px);
+        pointer-events: none;
+    }
+    .device-logo-img {
+        width: min(130px, 85%);
+        height: auto;
+        object-fit: contain;
+        filter:
+            brightness(1.5)
+            saturate(1.2)
+            drop-shadow(0 0 6px rgba(100, 180, 255, 0.6))
+            drop-shadow(0 0 18px rgba(80, 140, 255, 0.35));
+        position: relative;
+        z-index: 1;
+    }
+    .device-tagline {
+        margin: 0;
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(120, 180, 255, 0.75);
+        position: relative;
+        z-index: 1;
     }
     .hero-device-list {
         display: grid;
-        gap: .54rem;
+        gap: .45rem;
     }
     .hero-device-list div {
         display: flex;
         align-items: center;
-        gap: .48rem;
-        min-height: 34px;
-        padding: 0 .66rem;
-        border-radius: 8px;
-        background: #f8fbff;
-        border: 1px solid #dbeafe;
-        color: #1e3a5f;
-        font-size: .78rem;
-        font-weight: 800;
+        gap: .45rem;
+        min-height: 32px;
+        padding: 0 .6rem;
+        border-radius: 9px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.9);
+        font-size: .75rem;
+        font-weight: 600;
+        backdrop-filter: blur(8px);
+        transition: background 0.2s ease, border-color 0.2s ease;
+        position: relative;
+        z-index: 1;
+    }
+    .hero-device-list div:hover {
+        background: rgba(255, 255, 255, 0.12);
+        border-color: rgba(100, 180, 255, 0.4);
     }
     .hero-device-list i {
-        color: var(--primary);
+        color: #60c8ff;
     }
     .benefits-strip {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 1rem;
-        margin-top: 1rem;
+        margin-top: 1.25rem;
     }
     .benefit-card {
-        background: #fff;
-        border: 1px solid rgba(0, 52, 154, 0.08);
+        background: rgba(255, 255, 255, 0.75);
+        border: 1px solid rgba(100, 160, 255, 0.18);
         border-radius: 22px;
-        padding: 1rem 1.1rem;
+        padding: 1rem 1.15rem;
         display: flex;
         align-items: center;
         gap: 0.9rem;
-        box-shadow: 0 18px 30px -28px rgba(15, 23, 42, 0.35);
+        box-shadow:
+            0 18px 36px -28px rgba(15, 23, 42, 0.3),
+            inset 0 1px 0 rgba(255,255,255,0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+    }
+    .benefit-card:hover {
+        transform: translateY(-3px);
+        box-shadow:
+            0 24px 42px -24px rgba(0, 52, 154, 0.25),
+            inset 0 1px 0 rgba(255,255,255,0.95);
+        border-color: rgba(80, 140, 255, 0.3);
     }
     .benefit-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 16px;
+        width: 50px;
+        height: 50px;
+        border-radius: 15px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        background: rgba(0, 52, 154, 0.08);
+        background: linear-gradient(135deg, rgba(0, 52, 200, 0.1), rgba(80, 140, 255, 0.08));
         color: var(--primary);
         flex: 0 0 auto;
+        box-shadow: 0 6px 16px -8px rgba(0, 52, 200, 0.25);
     }
     .benefit-card strong {
         display: block;
-        font-size: 0.95rem;
-        margin-bottom: 0.15rem;
+        font-size: 0.93rem;
+        margin-bottom: 0.12rem;
+        color: #0f172a;
     }
     .benefit-card span {
         color: var(--text-muted);
-        font-size: 0.86rem;
+        font-size: 0.83rem;
     }
     .section-head {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: space-between;
         gap: 1rem;
-        margin-bottom: 0.9rem;
+        margin-bottom: 1.1rem;
     }
     .section-head h2 {
         margin: 0;
         font-family: 'Outfit', sans-serif;
-        font-size: clamp(1.45rem, 2.8vw, 2.1rem);
+        font-size: clamp(1.5rem, 2.8vw, 2.15rem);
         color: #071b37;
+        letter-spacing: -0.02em;
+    }
+    .section-head h2 span {
+        display: inline-block;
+        background: linear-gradient(90deg, #0a2380, #2d2dff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
     .section-head p {
-        margin: 0.35rem 0 0;
+        margin: 0.32rem 0 0;
         color: var(--text-muted);
+        font-size: 0.93rem;
     }
     .content-section {
-        margin-top: 2.2rem;
+        margin-top: 2.4rem;
     }
     .section-link {
         display: inline-flex;
@@ -510,22 +737,26 @@ $resolveIcon = function ($category) {
     .featured-grid {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 1rem;
+        gap: 1.1rem;
     }
     .featured-card {
         background: #fff;
-        border: 1px solid rgba(15, 23, 42, 0.08);
-        border-radius: 16px;
+        border: 1px solid rgba(180, 210, 255, 0.35);
+        border-radius: 20px;
         overflow: hidden;
-        box-shadow: 0 18px 38px -34px rgba(15, 23, 42, 0.55);
+        box-shadow:
+            0 8px 24px -16px rgba(0, 40, 120, 0.25),
+            0 2px 8px -4px rgba(0, 0, 0, 0.08);
         display: flex;
         flex-direction: column;
         transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
     }
     .featured-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 26px 42px -28px rgba(15, 23, 42, 0.5);
-        border-color: rgba(0, 52, 154, 0.22);
+        transform: translateY(-5px);
+        box-shadow:
+            0 28px 48px -24px rgba(0, 52, 180, 0.3),
+            0 8px 20px -10px rgba(0, 0, 0, 0.1);
+        border-color: rgba(60, 120, 255, 0.3);
     }
     .featured-image {
         position: relative;
@@ -685,15 +916,27 @@ $resolveIcon = function ($category) {
     .testimonial-grid {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 1rem;
+        gap: 1.1rem;
     }
     .service-card,
     .testimonial-card,
     .location-card {
-        background: #fff;
-        border: 1px solid rgba(0, 52, 154, 0.08);
+        background: rgba(255,255,255,0.82);
+        border: 1px solid rgba(160, 200, 255, 0.2);
         border-radius: 26px;
-        box-shadow: 0 20px 34px -30px rgba(15, 23, 42, 0.45);
+        box-shadow:
+            0 16px 32px -24px rgba(0, 40, 120, 0.2),
+            inset 0 1px 0 rgba(255,255,255,0.95);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        transition: transform 0.22s ease, box-shadow 0.22s ease;
+    }
+    .service-card:hover,
+    .testimonial-card:hover {
+        transform: translateY(-3px);
+        box-shadow:
+            0 24px 44px -22px rgba(0, 52, 180, 0.22),
+            inset 0 1px 0 rgba(255,255,255,0.95);
     }
     .service-card {
         padding: 1.25rem;
@@ -955,11 +1198,15 @@ $resolveIcon = function ($category) {
 
 <main class="shop-home">
     <section class="hero-banner">
+        <!-- Animated glow orbs -->
+        <div class="hero-glow-1" aria-hidden="true"></div>
+        <div class="hero-glow-2" aria-hidden="true"></div>
+        <div class="hero-glow-3" aria-hidden="true"></div>
         <div class="hero-banner-layout">
             <div class="hero-banner-content">
                 <span class="hero-banner-kicker"><?= htmlspecialchars($cfg('vitrine_hero_kicker', 'Tecnologia conectada')) ?></span>
                 <img class="hero-banner-logo" src="<?= app_url('assets/img/logo.png') ?>" alt="<?= htmlspecialchars($empresa) ?>">
-                <h2><?= htmlspecialchars($cfg('vitrine_hero_titulo', 'Celulares, games e acessorios em destaque')) ?></h2>
+                <h2><?= htmlspecialchars($cfg('vitrine_hero_titulo', 'Celulares, games e')) ?> <span class="hero-title-accent"><?= htmlspecialchars($cfg('vitrine_hero_titulo_accent', 'acessorios')) ?></span> <?= htmlspecialchars($cfg('vitrine_hero_titulo_fim', 'em destaque')) ?></h2>
                 <p><?= htmlspecialchars($cfg('vitrine_hero_texto', 'Escolha produtos com visual premium e atendimento direto pelo WhatsApp da loja.')) ?></p>
                 <div class="hero-banner-actions">
                     <a class="featured-btn" href="<?= route_url('vitrine/catalogo') ?>">
@@ -978,14 +1225,35 @@ $resolveIcon = function ($category) {
             </div>
             <div class="hero-banner-art" aria-hidden="true">
                 <div class="hero-orbit"></div>
+                <div class="hero-orbit-inner"></div>
                 <div class="hero-device">
+                    <!-- Floating badges -->
+                    <div class="hero-float-badge badge-green">
+                        <i data-lucide="shield-check" style="width: 13px; height: 13px;"></i>
+                        Compra segura
+                    </div>
+                    <div class="hero-float-badge badge-purple">
+                        <i data-lucide="zap" style="width: 13px; height: 13px;"></i>
+                        Suporte rapido
+                    </div>
                     <div class="hero-device-screen">
-                        <span>Loja online</span>
-                        <strong>Produtos e suporte no mesmo lugar</strong>
+                        <!-- Dark OLED-style screen with logo -->
+                        <div class="device-status-bar">
+                            <span style="font-size:.6rem;font-weight:800;letter-spacing:0.04em;color:rgba(255,255,255,0.6);">9:41</span>
+                            <div style="display:flex;align-items:center;gap:4px;">
+                                <i data-lucide="wifi" style="width:10px;height:10px;color:rgba(255,255,255,0.6);"></i>
+                                <i data-lucide="battery" style="width:10px;height:10px;color:rgba(255,255,255,0.6);"></i>
+                            </div>
+                        </div>
+                        <div class="device-logo-area">
+                            <div class="device-logo-glow"></div>
+                            <img src="<?= app_url('assets/img/logo.png') ?>" alt="<?= htmlspecialchars($empresa) ?>" class="device-logo-img">
+                            <p class="device-tagline">Tecnologia conectada</p>
+                        </div>
                         <div class="hero-device-list">
-                            <div><i data-lucide="smartphone" style="width: 15px; height: 15px;"></i> Assistencia tecnica</div>
-                            <div><i data-lucide="headphones" style="width: 15px; height: 15px;"></i> Acessorios</div>
-                            <div><i data-lucide="message-circle" style="width: 15px; height: 15px;"></i> WhatsApp direto</div>
+                            <div><i data-lucide="smartphone" style="width: 13px; height: 13px;"></i> Assistencia tecnica</div>
+                            <div><i data-lucide="headphones" style="width: 13px; height: 13px;"></i> Acessorios</div>
+                            <div><i data-lucide="message-circle" style="width: 13px; height: 13px;"></i> WhatsApp direto</div>
                         </div>
                     </div>
                 </div>

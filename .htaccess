@@ -11,7 +11,7 @@ RewriteRule ^(app|database|resources|vendor|routes|storage|docs|tools|sdk|bootst
 RewriteRule \.(env|ini|log|sql|zip|bak|old|orig)$ - [F,L]
 RewriteRule ^compartilhar-catalogo\.php$ index.php?url=compartilhar-catalogo [L,QSA]
 
-RewriteRule ^(sw\.js|manifest\.webmanifest|favicon\.png)$ public/$1 [L]
+RewriteRule ^(sw\.js|manifest\.webmanifest|favicon\.png|favicon\.ico)$ public/$1 [L]
 RewriteRule ^(assets|uploads)/(.*)$ public/$1/$2 [L]
 
 RewriteCond %{REQUEST_FILENAME} -f [OR]

@@ -19,6 +19,26 @@
     </div>
 </div>
 
+<!-- Command Palette (Ctrl + K) -->
+<div id="commandPaletteModal" class="cmd-palette-overlay" onclick="handleCmdBackdrop(event)" aria-hidden="true">
+    <div class="cmd-palette-dialog" onclick="event.stopPropagation()">
+        <div class="cmd-palette-search-bar">
+            <i data-lucide="search" class="cmd-search-icon"></i>
+            <input type="text" id="cmdPaletteInput" class="cmd-palette-input" placeholder="Buscar OS, cliente, aparelho, produto ou atalho... (Ctrl + K)" autocomplete="off" spellcheck="false">
+            <kbd class="cmd-esc-badge" onclick="closeCommandPalette()">ESC</kbd>
+        </div>
+        <div id="cmdPaletteResults" class="cmd-palette-results"></div>
+        <div class="cmd-palette-footer">
+            <span><kbd>↑</kbd> <kbd>↓</kbd> navegar</span>
+            <span><kbd>↵</kbd> selecionar</span>
+            <span><kbd>ESC</kbd> fechar</span>
+        </div>
+    </div>
+</div>
+
+<!-- Container Global de Notificações Toast -->
+<div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
 <script>
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -200,6 +220,189 @@ function liberarMaquininhaMP() {
                 .catch(err => alert('Ocorreu um erro na requisição'));
         }
     }
+}
+
+/* ================================================
+   COMMAND PALETTE & TOAST SYSTEM
+   ================================================ */
+let cmdSelectedIndex = -1;
+let cmdSearchTimeout = null;
+
+function openCommandPalette() {
+    const modal = document.getElementById('commandPaletteModal');
+    const input = document.getElementById('cmdPaletteInput');
+    if (!modal || !input) return;
+    modal.classList.add('active');
+    input.value = '';
+    cmdSelectedIndex = -1;
+    performCmdSearch('');
+    setTimeout(() => input.focus(), 50);
+    document.body.style.overflow = 'hidden';
+}
+
+function closeCommandPalette() {
+    const modal = document.getElementById('commandPaletteModal');
+    if (modal) modal.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+function handleCmdBackdrop(e) {
+    if (e.target && e.target.id === 'commandPaletteModal') {
+        closeCommandPalette();
+    }
+}
+
+// Global shortcut Ctrl+K / Cmd+K
+document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const modal = document.getElementById('commandPaletteModal');
+        if (modal && modal.classList.contains('active')) {
+            closeCommandPalette();
+        } else {
+            openCommandPalette();
+        }
+    }
+});
+
+const cmdInput = document.getElementById('cmdPaletteInput');
+if (cmdInput) {
+    cmdInput.addEventListener('input', (e) => {
+        clearTimeout(cmdSearchTimeout);
+        cmdSearchTimeout = setTimeout(() => {
+            performCmdSearch(e.target.value.trim());
+        }, 150);
+    });
+
+    cmdInput.addEventListener('keydown', (e) => {
+        const items = document.querySelectorAll('.cmd-item');
+        if (!items.length) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            cmdSelectedIndex = (cmdSelectedIndex + 1) % items.length;
+            updateCmdSelection(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            cmdSelectedIndex = (cmdSelectedIndex - 1 + items.length) % items.length;
+            updateCmdSelection(items);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (cmdSelectedIndex >= 0 && items[cmdSelectedIndex]) {
+                items[cmdSelectedIndex].click();
+            } else if (items[0]) {
+                items[0].click();
+            }
+        }
+    });
+}
+
+function updateCmdSelection(items) {
+    items.forEach((item, idx) => {
+        if (idx === cmdSelectedIndex) {
+            item.classList.add('selected');
+            item.scrollIntoView({ block: 'nearest' });
+        } else {
+            item.classList.remove('selected');
+        }
+    });
+}
+
+function performCmdSearch(query) {
+    const resultsContainer = document.getElementById('cmdPaletteResults');
+    if (!resultsContainer) return;
+
+    fetch('<?= route_url('search/global') ?>?q=' + encodeURIComponent(query))
+        .then(r => r.json())
+        .then(data => {
+            renderCmdResults(data.results || {});
+        })
+        .catch(() => {
+            resultsContainer.innerHTML = '<div class="cmd-empty">Erro ao pesquisar. Tente novamente.</div>';
+        });
+}
+
+function renderCmdResults(groups) {
+    const container = document.getElementById('cmdPaletteResults');
+    if (!container) return;
+
+    const sections = [
+        { key: 'acoes', title: 'Ações Rápidas' },
+        { key: 'os', title: 'Ordens de Serviço' },
+        { key: 'clientes', title: 'Clientes' },
+        { key: 'produtos', title: 'Produtos e Peças' }
+    ];
+
+    let hasAny = false;
+    let html = '';
+
+    sections.forEach(sec => {
+        const list = groups[sec.key] || [];
+        if (list.length > 0) {
+            hasAny = true;
+            html += `<div class="cmd-group-title">${sec.title}</div>`;
+            list.forEach(item => {
+                html += `
+                    <a href="${item.url}" class="cmd-item" onclick="closeCommandPalette()">
+                        <div class="cmd-item-icon"><i data-lucide="${item.icon || 'file-text'}"></i></div>
+                        <div class="cmd-item-info">
+                            <div class="cmd-item-title">${escapeHtml(item.title)}</div>
+                            ${item.subtitle ? `<div class="cmd-item-subtitle">${escapeHtml(item.subtitle)}</div>` : ''}
+                        </div>
+                        ${item.badge ? `<span class="cmd-item-badge">${escapeHtml(item.badge)}</span>` : ''}
+                    </a>
+                `;
+            });
+        }
+    });
+
+    if (!hasAny) {
+        html = `
+            <div class="cmd-empty">
+                <i data-lucide="search-x" style="width:28px;height:28px;margin-bottom:6px;opacity:0.6;"></i>
+                <div>Nenhum resultado encontrado</div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+    cmdSelectedIndex = -1;
+    if (window.lucide) lucide.createIcons();
+}
+
+// TOAST NOTIFICATION SYSTEM
+window.showToast = function(message, type = 'success', duration = 3500) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast-item toast-${type}`;
+    const iconName = type === 'success' ? 'check-circle-2' : (type === 'error' ? 'alert-circle' : (type === 'warning' ? 'alert-triangle' : 'info'));
+
+    toast.innerHTML = `
+        <div class="toast-icon"><i data-lucide="${iconName}"></i></div>
+        <div class="toast-message">${escapeHtml(message)}</div>
+        <button type="button" class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+        <div class="toast-progress" style="animation-duration:${duration}ms;"></div>
+    `;
+
+    container.appendChild(toast);
+    if (window.lucide) lucide.createIcons();
+
+    setTimeout(() => {
+        toast.classList.add('toast-fade-out');
+        setTimeout(() => toast.remove(), 250);
+    }, duration);
+};
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 </script>
 <?php foreach (($extraScripts ?? []) as $scriptSrc): ?>

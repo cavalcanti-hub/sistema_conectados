@@ -194,6 +194,7 @@ $shareImageType = [
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Conectados">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2300349a'/%3E%3Cpath d='M42 19a18 18 0 1 0 0 26' fill='none' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3C/svg%3E">
     <link rel="icon" type="image/png" sizes="32x32" href="<?= app_url('favicon.png') ?>">
     <link rel="icon" type="image/png" sizes="16x16" href="<?= app_url('assets/icons/icon-16x16.png') ?>">
     <link rel="apple-touch-icon" href="<?= app_url('assets/icons/icon-180x180.png') ?>">
@@ -264,15 +265,44 @@ $shareImageType = [
         from { transform: translateX(0); }
         to { transform: translateX(-50%); }
     }
+    @keyframes headerShine {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
     .store-header {
         position: sticky;
         top: 0;
         z-index: 1100;
         background:
-            linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0) 58%),
-            linear-gradient(110deg, #3131ff 0%, var(--primary) 48%, #2020dc 100%);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.16);
-        box-shadow: 0 20px 46px -36px rgba(0, 20, 70, 0.88);
+            linear-gradient(110deg,
+                #1010d8 0%,
+                #2525ff 18%,
+                #0a1fa8 45%,
+                #2020e0 70%,
+                #1515cc 100%);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow:
+            0 4px 32px -8px rgba(0, 20, 100, 0.55),
+            0 1px 0 rgba(255,255,255,0.08) inset;
+    }
+    /* Shine line at top of header */
+    .store-header::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(120, 200, 255, 0.7) 30%,
+            rgba(255, 255, 255, 0.9) 50%,
+            rgba(120, 200, 255, 0.7) 70%,
+            transparent 100%);
+        background-size: 200% 100%;
+        animation: headerShine 4s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 2;
     }
     .store-header-main {
         display: grid;
@@ -306,21 +336,22 @@ $shareImageType = [
         grid-template-columns: minmax(0, 1fr) minmax(166px, 218px) 58px;
         gap: 0;
         align-items: stretch;
-        min-height: 54px;
-        background: rgba(255, 255, 255, 0.98);
-        border: 1px solid rgba(255, 255, 255, 0.76);
+        min-height: 52px;
+        background: rgba(255, 255, 255, 0.97);
+        border: 1.5px solid rgba(255, 255, 255, 0.6);
         border-radius: 14px;
         overflow: hidden;
         box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.95),
-            0 18px 42px -32px rgba(0, 0, 0, 0.62);
-        transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease;
+            inset 0 1px 0 rgba(255, 255, 255, 0.9),
+            0 8px 24px -12px rgba(0, 0, 0, 0.35);
+        transition: box-shadow .2s ease, transform .2s ease, border-color .2s ease;
     }
     .store-search:focus-within {
-        border-color: rgba(255, 255, 255, 0.98);
+        border-color: rgba(255, 255, 255, 1);
         box-shadow:
-            0 0 0 4px rgba(255, 255, 255, 0.2),
-            0 22px 48px -30px rgba(0, 0, 0, 0.7);
+            0 0 0 3px rgba(120, 200, 255, 0.4),
+            0 0 0 6px rgba(255, 255, 255, 0.15),
+            0 16px 36px -16px rgba(0, 0, 0, 0.5);
         transform: translateY(-1px);
     }
     .store-search-input,
@@ -389,31 +420,38 @@ $shareImageType = [
         display: flex;
         align-items: center;
         justify-content: flex-end;
-        gap: 0.56rem;
+        gap: 0.5rem;
         min-width: 0;
     }
     .icon-link,
     .cart-trigger {
-        width: 48px;
-        height: 48px;
+        width: 46px;
+        height: 46px;
         border-radius: 999px;
-        border: 1px solid rgba(255, 255, 255, 0.54);
-        background: rgba(255, 255, 255, 0.96);
-        color: #10233f;
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        background: rgba(255, 255, 255, 0.14);
+        color: #fff;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         text-decoration: none;
         position: relative;
         cursor: pointer;
-        box-shadow: 0 16px 28px -24px rgba(0, 0, 0, 0.6);
-        transition: transform .18s ease, box-shadow .18s ease, background .18s ease, color .18s ease;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.22),
+            0 4px 12px -6px rgba(0,0,0,0.3);
+        transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
     }
     .icon-link:hover,
     .cart-trigger:hover {
         transform: translateY(-2px);
-        background: #fff;
-        box-shadow: 0 20px 34px -24px rgba(0, 0, 0, 0.72);
+        background: rgba(255, 255, 255, 0.28);
+        border-color: rgba(255, 255, 255, 0.72);
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.35),
+            0 8px 20px -8px rgba(0,0,0,0.4);
     }
     .icon-link:focus-visible,
     .cart-trigger:focus-visible,
@@ -425,20 +463,34 @@ $shareImageType = [
     .store-actions .admin-panel-link {
         width: auto;
         min-width: max-content;
-        min-height: 48px;
+        min-height: 46px;
         padding: 0 1.05rem;
-        gap: 0.55rem;
+        gap: 0.5rem;
         font-weight: 800;
         white-space: nowrap;
+        background: rgba(255,255,255,0.18);
+        border-color: rgba(255,255,255,0.45);
+        color: #fff;
+        border-radius: 12px;
+        font-size: 0.88rem;
+    }
+    .store-actions .admin-panel-link:hover {
+        background: rgba(255,255,255,0.28);
+        border-color: rgba(255,255,255,0.72);
     }
     .cart-trigger {
         width: auto;
-        padding: 0 0.7rem 0 1rem;
-        gap: 0.65rem;
+        padding: 0 0.8rem 0 1rem;
+        gap: 0.6rem;
         font-weight: 800;
         border-radius: 999px;
-        background: #0f172a;
-        border-color: rgba(255, 255, 255, 0.32);
+        background: rgba(255,255,255,0.14);
+        border-color: rgba(255,255,255,0.45);
+        color: #fff;
+        font-size: 0.88rem;
+    }
+    .cart-trigger:hover {
+        background: rgba(255,255,255,0.28);
         color: #fff;
     }
     .cart-trigger-count {
@@ -473,12 +525,13 @@ $shareImageType = [
         box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.95);
     }
     .store-nav {
-        background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(245,249,255,.98));
+        background: rgba(255, 255, 255, 0.96);
         color: #092347;
-        border-top: 1px solid rgba(0, 52, 154, 0.08);
-        border-bottom: 1px solid rgba(0, 52, 154, 0.08);
-        backdrop-filter: blur(14px);
-        box-shadow: 0 18px 42px -36px rgba(0, 25, 80, 0.55);
+        border-top: 1px solid rgba(255, 255, 255, 0.18);
+        border-bottom: 1px solid rgba(0, 40, 120, 0.08);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 8px 24px -12px rgba(0, 20, 80, 0.18);
     }
     .store-nav-inner {
         display: flex;
