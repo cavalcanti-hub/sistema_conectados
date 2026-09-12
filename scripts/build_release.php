@@ -19,7 +19,6 @@ $required = [
     'resources',
     'scripts',
     'database',
-    'docs',
     'database/schema.sql',
     'database/schema_current.sql',
     'database/schema_v2.sql',
@@ -36,7 +35,7 @@ $required = [
     'resources/views/print/thermal_80.php',
 ];
 
-$roots = ['app', 'public', 'resources', 'scripts', 'database', 'docs'];
+$roots = ['app', 'public', 'resources', 'scripts', 'database'];
 $rootFiles = ['.htaccess', '.user.ini', '.env.example'];
 $committedOverrides = [
     'app/Views/layout/public_header.php',
