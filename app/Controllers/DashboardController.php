@@ -4,27 +4,8 @@ namespace App\Controllers;
 use App\Core\Controller;
 
 class DashboardController extends Controller {
-    private $configModel;
+    use Traits\CompanyDataTrait;
 
-    public function __construct()
-    {
-        $this->configModel = new \App\Models\ConfigModel();
-    }
-
-    private function buildCompanyData(): array
-    {
-        $settings = $this->configModel->getAll();
-
-        return [
-            'name' => trim((string) ($settings['nome_empresa'] ?? 'Conectados')),
-            'phone' => trim((string) ($settings['whatsapp'] ?? '')),
-            'address' => trim((string) ($settings['endereco'] ?? '')),
-            'email' => trim((string) ($settings['email_negocio'] ?? '')),
-            'website' => trim((string) ($settings['website'] ?? '')),
-            'logo' => asset_url('assets/img/logo.png'),
-            'logo_print' => asset_url('assets/img/logo-print.png?v=20260702-banner'),
-        ];
-    }
 
     public function index() {
         $osModel = new \App\Models\OsModel();

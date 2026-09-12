@@ -6,10 +6,12 @@ use App\Core\Controller;
 
 class OsController extends Controller
 {
-    private $model;
-    private $clienteModel;
-    private $tecnicoModel;
-    private $configModel;
+    use Traits\CompanyDataTrait;
+
+    private \App\Models\OsModel $model;
+    private \App\Models\ClienteModel $clienteModel;
+    private \App\Models\TecnicoModel $tecnicoModel;
+    private \App\Models\ConfigModel $configModel;
 
     public function __construct()
     {
@@ -17,21 +19,6 @@ class OsController extends Controller
         $this->clienteModel = new \App\Models\ClienteModel();
         $this->tecnicoModel = new \App\Models\TecnicoModel();
         $this->configModel = new \App\Models\ConfigModel();
-    }
-
-    private function buildCompanyData(): array
-    {
-        $settings = $this->configModel->getAll();
-
-        return [
-            'name' => trim((string) ($settings['nome_empresa'] ?? 'Conectados')),
-            'phone' => trim((string) ($settings['whatsapp'] ?? '')),
-            'address' => trim((string) ($settings['endereco'] ?? '')),
-            'email' => trim((string) ($settings['email_negocio'] ?? '')),
-            'website' => trim((string) ($settings['website'] ?? '')),
-            'logo' => asset_url('assets/img/logo.png'),
-            'logo_print' => asset_url('assets/img/logo-print.png?v=20260702-banner'),
-        ];
     }
 
     private function renderPrintDocument(string $mode, array $payload): void
@@ -51,12 +38,27 @@ class OsController extends Controller
 
     private function revealDeviceSecretForView(array $os): array
     {
-        $allowed=['Administrador','Atendente','Técnico','Tecnico'];
-        if(!in_array(current_user_profile(),$allowed,true)){$os['senha_padrao']='••••••';return $os;}
-        $stored=(string)($os['senha_padrao']??'');
-        if($stored==='')return $os;
-        try{$os['senha_padrao']=(new \App\Services\DeviceSecretService())->decrypt($stored);}
-        catch(\Throwable $e){app_log('Falha segura ao abrir segredo de aparelho',['aparelho_id'=>(int)($os['aparelho_id']??0),'erro_tipo'=>get_class($e)]);$os['senha_padrao']='••••••';}
+        $allowed = ['Administrador', 'Atendente', 'Técnico', 'Tecnico'];
+        if (!in_array(current_user_profile(), $allowed, true)) {
+            $os['senha_padrao'] = '••••••';
+            return $os;
+        }
+
+        $stored = (string) ($os['senha_padrao'] ?? '');
+        if ($stored === '') {
+            return $os;
+        }
+
+        try {
+            $os['senha_padrao'] = (new \App\Services\DeviceSecretService())->decrypt($stored);
+        } catch (\Throwable $e) {
+            app_log('Falha segura ao abrir segredo de aparelho', [
+                'aparelho_id' => (int) ($os['aparelho_id'] ?? 0),
+                'erro_tipo' => get_class($e),
+            ]);
+            $os['senha_padrao'] = '••••••';
+        }
+
         return $os;
     }
 
@@ -434,22 +436,84 @@ class OsController extends Controller
     {
         $id = (int) ($_POST['id'] ?? 0);
         $nonce = trim((string) ($_POST['payment_nonce'] ?? ''));
+
         try {
             $profile = current_user_profile();
-            if (!in_array($profile, ['Administrador', 'Financeiro', 'Atendente'], true)) throw new \App\Services\PaymentException('FORBIDDEN', 'Usuario sem permissao para registrar pagamento.', 403);
-            if (!validate_os_payment_nonce($nonce, $id)) throw new \App\Services\PaymentException('PAYMENT_DUPLICATE', 'Solicitacao duplicada ou expirada.', 409);
+            if (!in_array($profile, ['Administrador', 'Financeiro', 'Atendente'], true)) {
+                throw new \App\Services\PaymentException('FORBIDDEN', 'Usuario sem permissao para registrar pagamento.', 403);
+            }
+
+            if (!validate_os_payment_nonce($nonce, $id)) {
+                throw new \App\Services\PaymentException('PAYMENT_DUPLICATE', 'Solicitacao duplicada ou expirada.', 409);
+            }
+
             $amountCents = \App\Services\ManualOsPaymentService::parseMoneyToCents($_POST['valor'] ?? '');
-            $result = (new \App\Services\ManualOsPaymentService())->register($id, $amountCents, (string) ($_POST['forma_pagamento'] ?? ''), (string) ($_POST['observacao'] ?? ''), (int) current_user_id());
+            $result = (new \App\Services\ManualOsPaymentService())->register(
+                $id,
+                $amountCents,
+                (string) ($_POST['forma_pagamento'] ?? ''),
+                (string) ($_POST['observacao'] ?? ''),
+                (int) current_user_id()
+            );
+
             consume_os_payment_nonce($nonce);
-            (new \App\Models\AuditModel())->record('registrar_pagamento_os', 'ordem_servico', $id, 'Pagamento manual registrado.', ['pagamento_id' => $result['payment_id'], 'valor' => number_format($result['amount_cents'] / 100, 2, '.', ''), 'forma' => $result['method'], 'origem' => 'manual', 'resultado' => 'sucesso']);
-            if (is_ajax_request()) { header('Content-Type: application/json; charset=utf-8'); echo json_encode(['success' => true, 'message' => 'Pagamento registrado com sucesso.', 'payment_status' => $result['status'], 'remaining_balance' => number_format($result['remaining_cents'] / 100, 2, ',', '.')]); return; }
+
+            (new \App\Models\AuditModel())->record(
+                'registrar_pagamento_os',
+                'ordem_servico',
+                $id,
+                'Pagamento manual registrado.',
+                [
+                    'pagamento_id' => $result['payment_id'],
+                    'valor' => number_format($result['amount_cents'] / 100, 2, '.', ''),
+                    'forma' => $result['method'],
+                    'origem' => 'manual',
+                    'resultado' => 'sucesso',
+                ]
+            );
+
+            if (is_ajax_request()) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Pagamento registrado com sucesso.',
+                    'payment_status' => $result['status'],
+                    'remaining_balance' => number_format($result['remaining_cents'] / 100, 2, ',', '.'),
+                ]);
+                return;
+            }
+
             $this->redirect(route_url('os/viewDetail', ['id' => $id, 'pagamento_ok' => 1]));
         } catch (\App\Services\PaymentException $e) {
-            if (is_ajax_request()) { http_response_code($e->httpStatus); header('Content-Type: application/json; charset=utf-8'); echo json_encode(['success' => false, 'message' => $e->getMessage(), 'code' => $e->domainCode]); return; }
+            if (is_ajax_request()) {
+                http_response_code($e->httpStatus);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'code' => $e->domainCode,
+                ]);
+                return;
+            }
+
             $this->redirect(route_url('os/viewDetail', ['id' => max(0, $id), 'payment_error' => $e->domainCode]));
         } catch (\Throwable $e) {
-            app_log('Falha transacional ao registrar pagamento manual', ['os_id' => $id, 'erro_tipo' => get_class($e)]);
-            if (is_ajax_request()) { http_response_code(500); header('Content-Type: application/json; charset=utf-8'); echo json_encode(['success' => false, 'message' => 'Nao foi possivel registrar o pagamento.', 'code' => 'PAYMENT_TRANSACTION_FAILED']); return; }
+            app_log('Falha transacional ao registrar pagamento manual', [
+                'os_id' => $id,
+                'erro_tipo' => get_class($e),
+            ]);
+
+            if (is_ajax_request()) {
+                http_response_code(500);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Nao foi possivel registrar o pagamento.',
+                    'code' => 'PAYMENT_TRANSACTION_FAILED',
+                ]);
+                return;
+            }
+
             $this->redirect(route_url('os/viewDetail', ['id' => max(0, $id), 'payment_error' => 'PAYMENT_TRANSACTION_FAILED']));
         }
     }
@@ -585,7 +649,8 @@ class OsController extends Controller
         if (!$os) {
             $this->redirect(route_url('os'));
         }
-        $os=$this->revealDeviceSecretForView($os);
+
+        $os = $this->revealDeviceSecretForView($os);
         $historico = $this->model->getHistorico($id);
         $pagamentos = $this->model->getPagamentos($id);
         $totalPago = $this->model->totalPagamentos($id);

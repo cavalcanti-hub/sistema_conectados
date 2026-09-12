@@ -3,7 +3,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 
 class ClientesController extends Controller {
-    private $model;
+    private \App\Models\ClienteModel $model;
     public function __construct() { $this->model = new \App\Models\ClienteModel(); }
 
     public function index() {
@@ -70,7 +70,9 @@ class ClientesController extends Controller {
     public function edit() {
         $id = $_GET['id'] ?? 0;
         $cliente = $this->model->find($id);
-        if (!$cliente) { header("Location: index.php?url=clientes"); exit; }
+        if (!$cliente) {
+            $this->redirect(route_url('clientes'));
+        }
         [$old, $error] = $this->consumeFormState();
         $this->view('clientes/edit', ['title'=>'Editar Cliente','page_title'=>'Editar Cliente','cliente'=>$cliente,'old'=>$old,'error'=>$error]);
     }
@@ -112,8 +114,7 @@ class ClientesController extends Controller {
     public function delete() {
         $id = $_POST['id'] ?? 0;
         $this->model->delete($id);
-        header("Location: index.php?url=clientes");
-        exit;
+        $this->redirect(route_url('clientes'));
     }
 
     private function sanitizeInput(array $source): array {

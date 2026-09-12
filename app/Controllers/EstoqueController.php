@@ -6,11 +6,11 @@ use App\Core\Controller;
 
 class EstoqueController extends Controller
 {
-    private $model;
-    private $catModel;
-    private $uploadError = null;
-    private $uploadedImageMime = null;
-    private $uploadedImageBlob = null;
+    private \App\Models\EstoqueModel $model;
+    private \App\Models\CategoriasModel $catModel;
+    private ?string $uploadError = null;
+    private ?string $uploadedImageMime = null;
+    private ?string $uploadedImageBlob = null;
 
     public function __construct()
     {

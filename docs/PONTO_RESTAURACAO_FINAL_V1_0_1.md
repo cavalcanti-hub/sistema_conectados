@@ -1,3 +1,0 @@
-# Ponto de Restauração Final v1.0.1-security
-
-- DB e uploads backupeados.

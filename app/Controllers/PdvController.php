@@ -5,36 +5,22 @@ use App\Core\Controller;
 
 class PdvController extends Controller
 {
-    private $model;
+    use Traits\CompanyDataTrait;
+
+    private \App\Models\PdvModel $model;
 
     public function __construct()
     {
         $this->model = new \App\Models\PdvModel();
     }
 
-    private function buildCompanyData(): array
-    {
-        $settings = (new \App\Models\ConfigModel())->getAll();
-
-        return [
-            'name' => trim((string) ($settings['nome_empresa'] ?? 'Conectados')),
-            'phone' => trim((string) ($settings['whatsapp'] ?? '')),
-            'address' => trim((string) ($settings['endereco'] ?? '')),
-            'email' => trim((string) ($settings['email_negocio'] ?? '')),
-            'website' => trim((string) ($settings['website'] ?? 'conectadosassistencia.com.br')),
-            'logo' => asset_url('assets/img/logo.png'),
-            'logo_print' => asset_url('assets/img/logo-print.png?v=20260702-banner'),
-        ];
-    }
-
     private function taxaCartaoPercentual(string $formaPagamento, array $settings): float
     {
-        $forma = strtolower($formaPagamento);
-        if (str_contains($forma, 'crédito') || str_contains($forma, 'credito') || str_contains($forma, 'crÃ©dito') || str_contains($forma, 'cr')) {
+        if (\App\Support\PaymentFormNormalizer::isCredit($formaPagamento)) {
             return normalize_decimal_input($settings['taxa_cartao_credito'] ?? 0);
         }
 
-        if (str_contains($forma, 'débito') || str_contains($forma, 'debito') || str_contains($forma, 'dÃ©bito')) {
+        if (\App\Support\PaymentFormNormalizer::isDebit($formaPagamento)) {
             return normalize_decimal_input($settings['taxa_cartao_debito'] ?? 0);
         }
 
@@ -43,20 +29,14 @@ class PdvController extends Controller
 
     private function taxaPointPercentual(string $formaPagamento, array $settings): float
     {
-        $forma = function_exists('mb_strtolower') ? mb_strtolower($formaPagamento, 'UTF-8') : strtolower($formaPagamento);
-        if (function_exists('iconv')) {
-            $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $forma);
-            if (is_string($ascii) && $ascii !== '') {
-                $forma = strtolower($ascii);
-            }
-        }
+        $forma = \App\Support\PaymentFormNormalizer::normalize($formaPagamento);
 
         if (str_contains($forma, 'debito') || str_contains($forma, 'qr') || str_contains($forma, 'saldo mercado')) {
             $point = normalize_decimal_input($settings['taxa_point_debito_qr_saldo'] ?? '');
             return $point > 0 ? $point : normalize_decimal_input($settings['taxa_cartao_debito'] ?? 0);
         }
 
-        if (str_contains($forma, 'credito') || preg_match('/(^|\s|-)cr($|\s|-)/', $forma)) {
+        if (\App\Support\PaymentFormNormalizer::isCredit($formaPagamento)) {
             if (str_contains($forma, '30')) {
                 $base = normalize_decimal_input($settings['taxa_point_credito_30d'] ?? 0);
             } elseif (str_contains($forma, '14')) {
@@ -70,8 +50,9 @@ class PdvController extends Controller
             }
 
             $installmentFee = 0.0;
-            if (preg_match('/\b([2-9]|1[0-2])x\b/', $forma, $matches)) {
-                $installmentFee = normalize_decimal_input($settings['taxa_point_parcelamento_' . (int) $matches[1] . 'x'] ?? 0);
+            $installments = \App\Support\PaymentFormNormalizer::extractInstallments($formaPagamento);
+            if ($installments > 1) {
+                $installmentFee = normalize_decimal_input($settings['taxa_point_parcelamento_' . $installments . 'x'] ?? 0);
             }
 
             return $base + $installmentFee;
@@ -96,13 +77,7 @@ class PdvController extends Controller
 
     private function pointOptionsFromForma(string $formaPagamento): array
     {
-        $forma = function_exists('mb_strtolower') ? mb_strtolower($formaPagamento, 'UTF-8') : strtolower($formaPagamento);
-        if (function_exists('iconv')) {
-            $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $forma);
-            if (is_string($ascii) && $ascii !== '') {
-                $forma = strtolower($ascii);
-            }
-        }
+        $forma = \App\Support\PaymentFormNormalizer::normalize($formaPagamento);
 
         $paymentType = 'credit_card';
         if (str_contains($forma, 'debito')) {
@@ -111,29 +86,14 @@ class PdvController extends Controller
             $paymentType = 'qr_code';
         }
 
-        $installments = 1;
-        if (preg_match('/\b([2-9]|1[0-2])x\b/', $forma, $matches)) {
-            $installments = (int) $matches[1];
-        }
+        $installments = \App\Support\PaymentFormNormalizer::extractInstallments($formaPagamento);
 
         return ['payment_type' => $paymentType, 'installments' => $installments];
     }
 
     private function isPointPayment(string $formaPagamento): bool
     {
-        $forma = function_exists('mb_strtolower') ? mb_strtolower($formaPagamento, 'UTF-8') : strtolower($formaPagamento);
-        if (function_exists('iconv')) {
-            $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $forma);
-            if (is_string($ascii) && $ascii !== '') {
-                $forma = strtolower($ascii);
-            }
-        }
-
-        return str_contains($forma, 'cartao')
-            || str_contains($forma, 'credito')
-            || str_contains($forma, 'debito')
-            || str_contains($forma, 'qr mercado')
-            || str_contains($forma, 'saldo mercado');
+        return \App\Support\PaymentFormNormalizer::isPointPayment($formaPagamento);
     }
 
     public function index()

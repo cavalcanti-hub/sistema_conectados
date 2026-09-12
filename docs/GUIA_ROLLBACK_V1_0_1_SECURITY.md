@@ -1,9 +1,0 @@
-# Guia de Rollback v1.0.1-security
-
-- restaurar arquivos anteriores;
-- restaurar banco do backup correspondente;
-- restaurar uploads somente quando necessário;
-- restaurar .env preservado;
-- manter a DEVICE_SECRET_KEY usada caso PINs já tenham sido criptografados;
-- não tentar descriptografar com outra chave;
-- validar login e OS após restauração.

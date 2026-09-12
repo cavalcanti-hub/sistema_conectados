@@ -73,13 +73,6 @@ $finData = [
 ];
 ?>
 
-<!-- Barra Superior Clean -->
-<div class="dash-top-header">
-    <h2 class="brand-font dash-title">Painel</h2>
-    <a href="<?= route_url('os/create') ?>" class="btn btn-primary btn-nova-os">
-        <i data-lucide="plus"></i> Nova OS
-    </a>
-</div>
 
 <!-- ==============================================
      CARROSSEL DE CARDS (KPI SLIDER CLEAN)
@@ -233,9 +226,9 @@ $finData = [
         </div>
         <?php endif; ?>
 
-        <!-- Ações Frequentes -->
+        <!-- Ações Rápidas -->
         <div class="card quick-actions-card" style="padding:1.15rem;">
-            <h4 class="brand-font" style="font-size:1rem;margin-bottom:0.75rem;">Ações Frequentes</h4>
+            <h4 class="brand-font" style="font-size:1rem;margin-bottom:0.75rem;">Acoes Rapidas</h4>
             <div class="quick-actions-grid">
                 <a href="<?= route_url('os/create') ?>" class="quick-action quick-action-primary">
                     <span class="quick-action-icon"><i data-lucide="plus"></i></span>
@@ -243,15 +236,15 @@ $finData = [
                 </a>
                 <a href="<?= route_url('pdv') ?>" class="quick-action">
                     <span class="quick-action-icon"><i data-lucide="shopping-cart"></i></span>
-                    <span>PDV</span>
+                    <span>PDV Balcao</span>
                 </a>
                 <a href="<?= route_url('clientes/create') ?>" class="quick-action">
                     <span class="quick-action-icon"><i data-lucide="user-plus"></i></span>
-                    <span>Cliente</span>
+                    <span>Novo Cliente</span>
                 </a>
                 <a href="<?= route_url('produtos/create') ?>" class="quick-action">
                     <span class="quick-action-icon"><i data-lucide="package-plus"></i></span>
-                    <span>Produto</span>
+                    <span>Novo Produto</span>
                 </a>
             </div>
         </div>

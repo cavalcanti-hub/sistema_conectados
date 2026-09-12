@@ -4,13 +4,13 @@ namespace App\Core;
 
 class Controller
 {
-    public function view($view, $data = [])
+    public function view(string $view, array $data = []): void
     {
         extract($data);
         $viewPath = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'Views' . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $view) . '.php';
 
         if (!file_exists($viewPath)) {
-            die("View $view nao encontrada.");
+            throw new \RuntimeException("View {$view} nao encontrada em: {$viewPath}");
         }
 
         ob_start();
@@ -28,14 +28,14 @@ class Controller
         );
     }
 
-    public function json($data)
+    public function json(mixed $data): void
     {
         header('Content-Type: application/json');
         echo json_encode($data);
         exit;
     }
 
-    protected function redirect($url)
+    protected function redirect(string $url): void
     {
         header("Location: " . $url);
         exit;

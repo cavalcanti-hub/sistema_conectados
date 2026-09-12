@@ -1,6 +1,0 @@
-# Release Notes v1.0.1-security
-
-- Criptografia de PIN e senha de aparelhos
-- Proteção Point e validação de webhook
-- Cancelamento lógico de OS (exclusão física removida)
-- Pagamentos manuais de OS unificados
